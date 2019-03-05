@@ -5,10 +5,10 @@ import processing.serial.*;
 
 public class processing extends PApplet {
 
-	// String leftcom="COM4";
-	// String rightcom="COM5";
-	String leftcom = "COM11";
-	String rightcom = "COM10";
+	String leftcom = "COM4";
+	String rightcom = "COM5";
+//	String leftcom = "COM11";
+//	String rightcom = "COM10";
 
 	Serial rightPort;
 	Serial leftPort;
@@ -63,7 +63,7 @@ public class processing extends PApplet {
 	double totalPress = 0;
 	int[] switchbinary = { 0, 0 };
 	double rad = 100;
-	float distances[][][] = new float [2][10][3];
+	float distances[][][] = new float[2][10][3];
 
 	public static void main(String[] args) {
 		PApplet.main(new String[] { "--present", "virtualskin.processing" });
@@ -71,7 +71,7 @@ public class processing extends PApplet {
 
 	public void settings() {
 //		size(100, 100, P3D);
-		fullScreen(P3D);
+		fullScreen(P3D, 2);
 	}
 
 	public void setup() {
@@ -80,19 +80,19 @@ public class processing extends PApplet {
 		ellipseMode(RADIUS);
 		for (int i = 0; i < 10; i++) {
 			for (int j = 0; j < 6; j++) {
-				imu[0][i][j]=0;
-				imu[1][i][j]=0;
+				imu[0][i][j] = 0;
+				imu[1][i][j] = 0;
 			}
 		}
 		for (int i = 0; i < 9; i++) {
 			magno[0][i] = 0;
 			magno[1][i] = 0;
 		}
-		
-		for(int i=0;i<10;i++) {
-			for(int j =0;j<3;j++) {
-				distances[0][i][j]=0;
-				distances[1][i][j]=0;
+
+		for (int i = 0; i < 10; i++) {
+			for (int j = 0; j < 3; j++) {
+				distances[0][i][j] = 0;
+				distances[1][i][j] = 0;
 			}
 		}
 //		for (int i = 0; i < 6; i++) {
@@ -127,66 +127,117 @@ public class processing extends PApplet {
 	int counter = 1;
 	float rotx = 0;
 	float dscale = 40;
-	int flicker=5;
+	int flicker = 5;
+	int[] randomBox = { 0, 0 };
+
 	public void draw() {
 		background(0);
 
 		thread("serialr");
 		thread("seriall");
-		
-		thread("rightCalc");
-		thread("leftCalc");
+		calcSumrpy();
+		calcAvgrpy();
+		println("LEFT  SEND MICRO TIME: ", ttime[1]);
+		println("RIGHT SEND MICRO TIME: ", ttime[0]);
+		println();
+		println("LEFT  ROLL/PITCH/YAW: ", roll[1][10], pitch[1][10], yaw[1][10]);
+		println("RIGHT ROLL/PITCH/YAW: ", roll[0][10], pitch[0][10], yaw[0][10]);
+		println();
+		println("SUM   ROLL/PITCH/YAW: ", sroll, spitch, syaw);
+		println("TOTAL ROLL/PITCH/YAW: ", troll, tpitch, tyaw);
+		println();
+
 		strokeWeight(3);
 		stroke(255);
 		fill(255);
 		textSize(40);
 		text(frameRate, 30, 30);
 		fill(255, 0, 0);
-		
-		for (int i = 0; i < 10; i++) {
+//		randomBox[0] = (int) random(0, 10);
+//		randomBox[1] = (int) random(0, 10);
+		for (int k = 0; k < 2; k++) {
+			for (int i = 0; i < 10; i++) {
+				pushMatrix();
+				translate((6 - (1 + (k * 4))) * width / 6, (1 + i) * height / 11, 0);
+				rotateX(PI / 2);
+				rotateX(pitch[k][i] * PI / 180);
+				rotateY(roll[k][i] * PI / 180);
+				rotateZ(yaw[k][i] * PI / 180);
+				translate((float) imu[k][i][0] * dscale, (float) imu[k][i][1] * dscale, (float) imu[k][i][2] * dscale);
+//				strokeWeight((float) imu[1][i][0] / 2);
+				strokeWeight(1);
+				stroke(255, 0, 0);
+				line(-1000, 0, 0, 1000, 0, 0);
+//				strokeWeight((float) imu[1][i][1] / 2);
+				stroke(0, 255, 0);
+				line(0, -1000, 0, 0, 1000, 0);
+//				strokeWeight((float) imu[1][i][2] / 2);
+				stroke(0, 0, 255);
+				line(0, 0, -1000, 0, 0, 1000);
+				stroke(0);
+				fill(255);
+				strokeWeight(5);
+				box(30);
+				popMatrix();
+			}
 			pushMatrix();
-			translate(width / 4, (1 + i) * height / 11, 0);
-			rotateX(PI/2);
-			rotateX(pitch[1][i] * PI / 180);
-			rotateY(roll[1][i] * PI / 180);
-			rotateZ(yaw[1][i] * PI / 180);
-			translate((float)imu[1][i][0]*dscale,(float)imu[1][i][1]*dscale,(float)imu[1][i][2]*dscale);
+			translate((6 - (2 + (k * 2))) * width / 6, height / 2, 0);
+			rotateX(PI / 2);
+			rotateX(pitch[k][10] * PI / 180);
+			rotateY(roll[k][10] * PI / 180);
+			rotateZ(yaw[k][10] * PI / 180);
 			strokeWeight(1);
-			stroke(255,0,0);
-			line(-20000,0,0,20000,0,0);
-			stroke(0,255,0);
-			line(0,-20000,0,0,20000,0);
-			stroke(0,0,255);
-			line(0,0,-20000,0,0,20000);
+			stroke(255, 0, 0);
+			line(-1000, 0, 0, 1000, 0, 0);
+			stroke(0, 255, 0);
+			line(0, -1000, 0, 0, 1000, 0);
+			stroke(0, 0, 255);
+			line(0, 0, -1000, 0, 0, 1000);
 			stroke(0);
 			fill(255);
 			strokeWeight(5);
 			box(50);
 			popMatrix();
 		}
-		
-		for (int i = 0; i < 10; i++) {
-			pushMatrix();
-			translate((3*width) / 4, (1 + i) * height / 11, 0);
-			rotateX(PI/2);
-			rotateX(pitch[0][i] * PI / 180);
-			rotateY(roll[0][i] * PI / 180);
-			rotateZ(yaw[0][i] * PI / 180);
-			translate((float)imu[0][i][0]*dscale,(float)imu[0][i][1]*dscale,(float)imu[0][i][2]*dscale);
-			strokeWeight(1);
-			stroke(255,0,0);
-			line(-20000,0,0,20000,0,0);
-			stroke(0,255,0);
-			line(0,-20000,0,0,20000,0);
-			stroke(0,0,255);
-			line(0,0,-20000,0,0,20000);
-			stroke(0);
-			fill(255);
-			strokeWeight(5);
-			box(50);
-			popMatrix();
-		}
-		
+
+		pushMatrix();
+		translate(width / 2, height / 4, 0);
+		rotateX(PI / 2);
+		rotateX(spitch * PI / 180);
+		rotateY(sroll * PI / 180);
+		rotateZ(syaw * PI / 180);
+		strokeWeight(1);
+		stroke(255, 0, 0);
+		line(-1000, 0, 0, 1000, 0, 0);
+		stroke(0, 255, 0);
+		line(0, -1000, 0, 0, 1000, 0);
+		stroke(0, 0, 255);
+		line(0, 0, -1000, 0, 0, 1000);
+		stroke(0);
+		fill(255);
+		strokeWeight(5);
+		box(100);
+		popMatrix();
+
+		pushMatrix();
+		translate(width / 2, 3 * height / 4, 0);
+		rotateX(PI / 2);
+		rotateX(tpitch * PI / 180);
+		rotateY(troll * PI / 180);
+		rotateZ(tyaw * PI / 180);
+		strokeWeight(1);
+		stroke(255, 0, 0);
+		line(-1000, 0, 0, 1000, 0, 0);
+		stroke(0, 255, 0);
+		line(0, -1000, 0, 0, 1000, 0);
+		stroke(0, 0, 255);
+		line(0, 0, -1000, 0, 0, 1000);
+		stroke(0);
+		fill(255);
+		strokeWeight(5);
+		box(100);
+		popMatrix();
+
 		hcount[0]++;
 		hcount[1]++;
 		if (hcount[0] == histlength) {
@@ -260,22 +311,28 @@ public class processing extends PApplet {
 						nmag[k][i][off[k]] = magno[k][i];
 					}
 					for (int i = 0; i < 6; i++) {
-						imu[k][0][i] = magno[k][i];
+						imu[k][9][i] = magno[k][i];
 					}
 					for (int i = 0; i < 6; i++) {
 //						imuhista[k][5][i][hcount[k]] = handimu[k][5][i];
 //						imuhista[k][6][i][hcount[k]] += handimu[k][5][i];
 //						handimu[k][6][i] += handimu[k][5][i];
-						nimu[k][0][i][off[k]] = handimu[k][5][i];
+						nimu[k][9][i][off[k]] = imu[k][9][i];
 //						nimu[k][6][i][off[k]] += handimu[k][5][i];
 					}
-					for (int readnum = 1; readnum < 10; readnum++) {
-						imu[k][readnum][0] = ((inBuffer[k][6 + (readnum * 12)] << 8) | (inBuffer[k][7 + (readnum * 12)] & 0xff));
-						imu[k][readnum][1] = ((inBuffer[k][8 + (readnum * 12)] << 8) | (inBuffer[k][9 + (readnum * 12)] & 0xff));
-						imu[k][readnum][2] = ((inBuffer[k][10 + (readnum * 12)] << 8)| (inBuffer[k][11 + (readnum * 12)] & 0xff));
-						imu[k][readnum][3] = ((inBuffer[k][12 + (readnum * 12)] << 8)| (inBuffer[k][13 + (readnum * 12)] & 0xff));
-						imu[k][readnum][4] = ((inBuffer[k][14 + (readnum * 12)] << 8)| (inBuffer[k][15 + (readnum * 12)] & 0xff));
-						imu[k][readnum][5] = ((inBuffer[k][16 + (readnum * 12)] << 8)| (inBuffer[k][17 + (readnum * 12)] & 0xff));
+					for (int readnum = 0; readnum < 9; readnum++) {
+						imu[k][readnum][0] = ((inBuffer[k][18 + (readnum * 12)] << 8)
+								| (inBuffer[k][19 + (readnum * 12)] & 0xff));
+						imu[k][readnum][1] = ((inBuffer[k][20 + (readnum * 12)] << 8)
+								| (inBuffer[k][21 + (readnum * 12)] & 0xff));
+						imu[k][readnum][2] = ((inBuffer[k][22 + (readnum * 12)] << 8)
+								| (inBuffer[k][23 + (readnum * 12)] & 0xff));
+						imu[k][readnum][3] = ((inBuffer[k][24 + (readnum * 12)] << 8)
+								| (inBuffer[k][25 + (readnum * 12)] & 0xff));
+						imu[k][readnum][4] = ((inBuffer[k][26 + (readnum * 12)] << 8)
+								| (inBuffer[k][27 + (readnum * 12)] & 0xff));
+						imu[k][readnum][5] = ((inBuffer[k][28 + (readnum * 12)] << 8)
+								| (inBuffer[k][29 + (readnum * 12)] & 0xff));
 						for (int i = 0; i < 3; i++) {
 							if (imu[k][readnum][i] > negcheck) {
 								imu[k][readnum][i] = (-(imu[k][readnum][i] - negcheck) * ascale);
@@ -327,13 +384,26 @@ public class processing extends PApplet {
 //				redraw();
 			}
 		}
+		if (k == 0) {
+			rightCalc();
+			// thread("rightCalc");
+		} else {
+			leftCalc();
+			// thread("leftCalc");
+		}
 	}
 
 	double gyro[][][] = new double[2][10][3];
 	double angles[][][] = new double[2][10][3];
-	float[][] roll = { { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 } };
-	float[][] pitch = { { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 } };
-	float[][] yaw = { { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 } };
+	float[][] roll = new float[2][11];// { { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 } };
+	float[][] pitch = new float[2][11];// { { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 } };
+	float[][] yaw = new float[2][11];// { { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 } };
+	float sroll = 0;
+	float spitch = 0;
+	float syaw = 0;
+	float troll = 0;
+	float tpitch = 0;
+	float tyaw = 0;
 	float[][] magavg = new float[2][9];
 	float[][][] imuavg = new float[2][10][6];
 	double dt = .001;
@@ -371,11 +441,11 @@ public class processing extends PApplet {
 				magavg[k][i] += nmag[k][i][j];
 			}
 			magavg[k][i] /= nframes;
-			if(i<6) {
-				imuavg[k][0][i]=magavg[k][i];
+			if (i < 6) {
+				imuavg[k][9][i] = magavg[k][i];
 			}
 		}
-		for (int i = 1; i < 10; i++) {
+		for (int i = 0; i < 9; i++) {
 			for (int j = 0; j < 6; j++) {
 				for (int n = 0; n < nframes; n++) {
 					imuavg[k][i][j] += nimu[k][i][j][n];
@@ -383,16 +453,42 @@ public class processing extends PApplet {
 				imuavg[k][i][j] /= nframes;
 			}
 		}
-		roll[k][0] = atan2(magavg[k][1], magavg[k][2]) * 180 / PI;
-		pitch[k][0] = atan2(-magavg[k][0], sqrt((magavg[k][1] * magavg[k][1]) + (magavg[k][2] * magavg[k][2]))) * 180 / PI;
-		yaw[k][0] = atan2(magavg[k][6], magavg[k][7]) * 180 / PI + zoffset;
-		// yaw[k][0]=atan2(sqrt((magavg[k][0]*magavg[k][0])+(magavg[k][1]*magavg[k][1])), magavg[k][2]);
+		roll[k][9] = atan2(magavg[k][1], magavg[k][2]) * 180 / PI;
+		pitch[k][9] = atan2(-magavg[k][0], sqrt((magavg[k][1] * magavg[k][1]) + (magavg[k][2] * magavg[k][2]))) * 180
+				/ PI;
+		yaw[k][9] = atan2(magavg[k][6], magavg[k][7]) * 180 / PI + zoffset;
+		// yaw[k][0]=atan2(sqrt((magavg[k][0]*magavg[k][0])+(magavg[k][1]*magavg[k][1])),
+		// magavg[k][2]);
 
-		for (int i = 1; i < 10; i++) {
+		for (int i = 0; i < 9; i++) {
 			roll[k][i] = -atan2(imuavg[k][i][0], imuavg[k][i][2]) * 180 / PI;
-			pitch[k][i] = atan2(-imuavg[k][i][1], sqrt((imuavg[k][i][0] * imuavg[k][i][0]) + (imuavg[k][i][2] * imuavg[k][i][2]))) * 180 / PI;
-			yaw[k][i] = atan2(sqrt((imuavg[k][i][1] * imuavg[k][i][1]) + (imuavg[k][i][0] * imuavg[k][i][0])), imuavg[k][i][2]);
+			pitch[k][i] = atan2(-imuavg[k][i][1],
+					sqrt((imuavg[k][i][0] * imuavg[k][i][0]) + (imuavg[k][i][2] * imuavg[k][i][2]))) * 180 / PI;
+			yaw[k][i] = atan2(sqrt((imuavg[k][i][1] * imuavg[k][i][1]) + (imuavg[k][i][0] * imuavg[k][i][0])),
+					imuavg[k][i][2]);
 		}
+		roll[k][10] = 0;
+		pitch[k][10] = 0;
+		yaw[k][10] = 0;
+		for (int i = 0; i < 10; i++) {
+			roll[k][10] += roll[k][i];
+			pitch[k][10] += pitch[k][i];
+			yaw[k][10] += yaw[k][i];
+		}
+//		roll[k][10] /= 10;
+//		pitch[k][10] /= 10;
+//		yaw[k][10] /= 10;
 	}
 
+	public void calcSumrpy() {
+		sroll = (roll[0][10] + roll[1][10]);
+		spitch = (pitch[0][10] + pitch[1][10]);
+		syaw = (yaw[0][10] + yaw[1][10]);
+	}
+
+	public void calcAvgrpy() {
+		troll = sroll / 2;
+		tpitch = spitch / 2;
+		tyaw = syaw / 2;
+	}
 }
