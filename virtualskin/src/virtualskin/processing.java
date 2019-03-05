@@ -76,23 +76,24 @@ public class processing extends PApplet {
 
 	public void draw() {
 		background(0);
-//		int m1=millis();
-//		long n1=System.nanoTime();
+		int m1=millis();
+		long n1=System.nanoTime();
 		thread("leftCollect");
 		thread("rightCollect");
+
 		body.printSendTimes();
 		body.printTRPY();
-//		int m2=millis();
-//		long n2=System.nanoTime();
-//		int m3 = m2-m1;
-//		long n3 = n2 - n1;
-//		totalnano += n3;
-//		avgnano = totalnano/(counter+1);
-//		println("TOTAL MILLIS CYCLE TIME: ", m3);
-//		println("TOTAL NANO CYCLE TIME:   ", n3);
-//		println();
-//		println("COUNTER: ", counter);
-//		println("AVERAGE NANO CYCLE TIME: ", avgnano);
+		int m2=millis();
+		long n2=System.nanoTime();
+		int m3 = m2-m1;
+		long n3 = n2 - n1;
+		totalnano += n3;
+		avgnano = totalnano/(counter+1);
+		println("TOTAL MILLIS CYCLE TIME: ", m3);
+		println("TOTAL NANO CYCLE TIME:   ", n3);
+		println();
+		println("COUNTER: ", counter);
+		println("AVERAGE NANO CYCLE TIME: ", avgnano);
 
 		strokeWeight(3);
 		stroke(255);
