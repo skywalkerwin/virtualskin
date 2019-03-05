@@ -25,14 +25,14 @@ public class Body {
 		right.serialEvent();
 	}
 	public void printSendTimes() {
-		proc.println(left.ttime);
-		proc.println(right.ttime);
-		proc.println();
+		PApplet.println(left.ttime);
+		PApplet.println(right.ttime);
+		PApplet.println();
 	}
 	public void printTRPY() {
-		proc.println(left.roll[10],left.pitch[10],left.yaw[10]);
-		proc.println(right.roll[10],right.pitch[10],right.yaw[10]);
-		proc.println();
+		PApplet.println(left.roll[10],left.pitch[10],left.yaw[10]);
+		PApplet.println(right.roll[10],right.pitch[10],right.yaw[10]);
+		PApplet.println();
 	}
 
 }

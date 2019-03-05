@@ -59,6 +59,7 @@ public class processing extends PApplet {
 	int order = 0;
 	int mt1, mt2, mt3, mt4, mt5 = 0;
 	long nt1, nt2, nt3, nt4, nt5 = 0;
+	long totalnano=0;
 	long avgnano = 0;
 	int counter = 1;
 	float rotx = 0;
@@ -66,21 +67,41 @@ public class processing extends PApplet {
 	int flicker = 5;
 	int[] randomBox = { 0, 0 };
 
+	public void leftCollect() {
+		body.left.serialEvent();
+	}
+	public void rightCollect() {
+		body.right.serialEvent();
+	}
+
 	public void draw() {
 		background(0);
 		int m1=millis();
+		long n1=System.nanoTime();
+//		thread("leftCollect");
+//		thread("rightCollect");
+
 		body.serialEvents();
 		body.printSendTimes();
 		body.printTRPY();
 		int m2=millis();
+		long n2=System.nanoTime();
 		int m3 = m2-m1;
-		println("TOTAL CYCLE TIME: ", m3);
+		long n3 = n2 - n1;
+		totalnano += n3;
+		avgnano = totalnano/(counter+1);
+		println("TOTAL MILLIS CYCLE TIME: ", m3);
+		println("TOTAL NANO CYCLE TIME:   ", n3);
+		println();
+		println("COUNTER: ", counter);
+		println("AVERAGE NANO CYCLE TIME: ", avgnano);
 
 		strokeWeight(3);
 		stroke(255);
 		fill(255);
 		textSize(40);
 		text(frameRate, 30, 30);
+		counter++;
 //		fill(255, 0, 0);
 ////		randomBox[0] = (int) random(0, 10);
 ////		randomBox[1] = (int) random(0, 10);
