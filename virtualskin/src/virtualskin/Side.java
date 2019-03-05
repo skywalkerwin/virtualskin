@@ -1,6 +1,7 @@
 package virtualskin;
 
 import processing.core.PApplet;
+import processing.core.PConstants;
 import processing.serial.Serial;
 
 public class Side {
@@ -72,7 +73,7 @@ public class Side {
 	public void serialEvent() {
 		if (firstContact == false) {
 			vals = port.readStringUntil(10);
-			proc.println(vals);
+			PApplet.println(vals);
 			if (vals != null) {
 				port.clear(); // clear the serial port buffer
 				firstContact = true; // you've had first contact from the microcontroller
@@ -193,18 +194,18 @@ public class Side {
 				imuavg[i][j] /= nframes;
 			}
 		}
-		roll[9] = proc.atan2(magavg[1], magavg[2]) * 180 / proc.PI;
-		pitch[9] = proc.atan2(-magavg[0], proc.sqrt((magavg[1] * magavg[1]) + (magavg[2] * magavg[2]))) * 180
-				/ proc.PI;
-		yaw[9] = proc.atan2(magavg[6], magavg[7]) * 180 / proc.PI + zoffset;
+		roll[9] = PApplet.atan2(magavg[1], magavg[2]) * 180 / PConstants.PI;
+		pitch[9] = PApplet.atan2(-magavg[0], PApplet.sqrt((magavg[1] * magavg[1]) + (magavg[2] * magavg[2]))) * 180
+				/ PConstants.PI;
+		yaw[9] = PApplet.atan2(magavg[6], magavg[7]) * 180 / PConstants.PI + zoffset;
 		// yaw[0]=atan2(sqrt((magavg[0]*magavg[0])+(magavg[1]*magavg[1])),
 		// magavg[2]);
 
 		for (int i = 0; i < 9; i++) {
-			roll[i] = -proc.atan2(imuavg[i][0], imuavg[i][2]) * 180 / proc.PI;
-			pitch[i] = proc.atan2(-imuavg[i][1],
-					proc.sqrt((imuavg[i][0] * imuavg[i][0]) + (imuavg[i][2] * imuavg[i][2]))) * 180 / proc.PI;
-			yaw[i] = proc.atan2(proc.sqrt((imuavg[i][1] * imuavg[i][1]) + (imuavg[i][0] * imuavg[i][0])),
+			roll[i] = -PApplet.atan2(imuavg[i][0], imuavg[i][2]) * 180 / PConstants.PI;
+			pitch[i] = PApplet.atan2(-imuavg[i][1],
+					PApplet.sqrt((imuavg[i][0] * imuavg[i][0]) + (imuavg[i][2] * imuavg[i][2]))) * 180 / PConstants.PI;
+			yaw[i] = PApplet.atan2(PApplet.sqrt((imuavg[i][1] * imuavg[i][1]) + (imuavg[i][0] * imuavg[i][0])),
 					imuavg[i][2]);
 		}
 		roll[10] = 0;

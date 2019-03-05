@@ -12,18 +12,7 @@ public class Body {
 		left = new Side(proc, leftport);
 		right = new Side(proc, rightport);
 	}
-	void leftSerial() {
-		left.serialEvent();
-	}
-	void rightSerial() {
-		right.serialEvent();
-	}
-	public void serialEvents() {
-//		proc.thread("body.leftSerial");
-//		proc.thread("body.rightSerial");
-		left.serialEvent();
-		right.serialEvent();
-	}
+
 	public void printSendTimes() {
 		PApplet.println(left.ttime);
 		PApplet.println(right.ttime);
