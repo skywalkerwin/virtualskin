@@ -118,6 +118,8 @@ public class processing extends PApplet {
 		leftPort.buffer(134);
 		delay(1000);
 		sphereDetail(10);
+		Side leftSide = new Side(this, leftPort, ascale, gscale);
+		Side rightSide = new Side(this, rightPort, ascale, gscale);
 	}
 
 	int order = 0;
