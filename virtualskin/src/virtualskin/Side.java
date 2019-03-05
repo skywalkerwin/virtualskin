@@ -1,4 +1,5 @@
 package virtualskin;
+
 import processing.core.PApplet;
 import processing.serial.Serial;
 
@@ -7,11 +8,11 @@ public class Side {
 	double[][] imu = new double[10][6];
 	double[][] handimu = new double[7][6];
 	double[][] armimu = new double[7][6];
-	//double[][] armimuMAG = new double[3][9];
-	//double [][] imu9 = new double[3][9];
+	// double[][] armimuMAG = new double[3][9];
+	// double [][] imu9 = new double[3][9];
 	double[] magno = new double[9];
-	int histlength = 120;
-	int nframes = 3;
+	static int histlength = 120;
+	static int nframes = 3;
 	double[][][] nimu = new double[12][6][nframes];
 	double[][] nmag = new double[9][nframes];
 	int thumbPressure = 0;
@@ -23,25 +24,41 @@ public class Side {
 	double[] presst = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 	double totalPress = 0;
 	int switchbinary = 0;
-	
+
 	int[] magadj = { 176, 176, 165 };
 	int ttime = 0;
 	String vals = " ";
 	boolean firstContact = false;
 	byte[] inBuffer = new byte[134];
-	int negcheck = 32767;
+	static int negcheck = 32767;
 	int clockcount = 0;
 	int off = 0;
 	Serial port;
-	double ascale;
-	double gscale;
+	double ascale = .000488;
+	double gscale = .061068;
 	
-	
-	Side(PApplet p, Serial sidePort, double ascl, double gscl){
+	double gyro[][] = new double[10][3];
+	double angles[][] = new double[10][3];
+	float[] roll = new float[11];// { { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 } };
+	float[] pitch = new float[11];// { { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 } };
+	float[] yaw = new float[11];// { { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 } };
+	float sroll = 0;
+	float spitch = 0;
+	float syaw = 0;
+	float troll = 0;
+	float tpitch = 0;
+	float tyaw = 0;
+	float[] magavg = new float[9];
+	float[][] imuavg = new float[10][6];
+	double dt = .001;
+	double t = .002;
+	double a = t / (t + dt);
+	double a1 = 1 - a;
+	float zoffset = 0f;
+
+	Side(PApplet p, Serial sidePort) {
 		proc = p;
 		port = sidePort;
-		ascale = ascl;
-		gscale = gscl;
 		for (int i = 0; i < 10; i++) {
 			for (int j = 0; j < 6; j++) {
 				imu[i][j] = 0;
@@ -49,8 +66,9 @@ public class Side {
 		}
 		for (int i = 0; i < 9; i++) {
 			magno[i] = 0;
-		}		
+		}
 	}
+
 	public void serialEvent() {
 		if (firstContact == false) {
 			vals = port.readStringUntil(10);
@@ -88,23 +106,17 @@ public class Side {
 							magno[i] = magno[i] * gscale;
 						}
 						if (i > 5) {
-							// magno[i]=(magno[i]*(((magadj[(-6+i)]-128) *.5)/128)+1);
 							magno[i] = magno[i];
 						}
 					}
 					for (int i = 0; i < 9; i++) {
-//						mhista[i][hcount] = magno[i];
 						nmag[i][off] = magno[i];
 					}
 					for (int i = 0; i < 6; i++) {
 						imu[9][i] = magno[i];
 					}
 					for (int i = 0; i < 6; i++) {
-//						imuhista[5][i][hcount] = handimu[5][i];
-//						imuhista[6][i][hcount] += handimu[5][i];
-//						handimu[6][i] += handimu[5][i];
 						nimu[9][i][off] = imu[9][i];
-//						nimu[6][i][off] += handimu[5][i];
 					}
 					for (int readnum = 0; readnum < 9; readnum++) {
 						imu[readnum][0] = ((inBuffer[18 + (readnum * 12)] << 8)
@@ -135,18 +147,9 @@ public class Side {
 						}
 						// APPEND TO HISTORIES
 						for (int i = 0; i < 6; i++) {
-							// imuhista[readnum][i][hcount]=imu[readnum][i];
-							// imuhista[6][i][hcount]+=imu[readnum][i];
-//							imu[6][i] += imu[readnum][i];
 							nimu[readnum][i][off] = imu[readnum][i];
-//							nimu[6][i][off] += imu[readnum][i];
 						}
 					}
-					// for (int i=0; i<6; i++) {
-					// imuhista[6][i][hcount]=imuhista[6][i][hcount]/6;
-					// handimu[6][i]/=6;
-					// nimu[6][i][off]/=6;
-					// }
 				}
 				thumbPressure = ((inBuffer[126] << 8) | (inBuffer[127] & 0xff));
 				if (thumbPressure > maxpress) {
@@ -167,9 +170,54 @@ public class Side {
 				if (off == nframes) {
 					off = 0;
 				}
-//				redraw();
 			}
 		}
+		calcrpy();
 	}
 	
+	public void calcrpy() {
+		for (int i = 0; i < 9; i++) {
+			for (int j = 0; j < nframes; j++) {
+				magavg[i] += nmag[i][j];
+			}
+			magavg[i] /= nframes;
+			if (i < 6) {
+				imuavg[9][i] = magavg[i];
+			}
+		}
+		for (int i = 0; i < 9; i++) {
+			for (int j = 0; j < 6; j++) {
+				for (int n = 0; n < nframes; n++) {
+					imuavg[i][j] += nimu[i][j][n];
+				}
+				imuavg[i][j] /= nframes;
+			}
+		}
+		roll[9] = proc.atan2(magavg[1], magavg[2]) * 180 / proc.PI;
+		pitch[9] = proc.atan2(-magavg[0], proc.sqrt((magavg[1] * magavg[1]) + (magavg[2] * magavg[2]))) * 180
+				/ proc.PI;
+		yaw[9] = proc.atan2(magavg[6], magavg[7]) * 180 / proc.PI + zoffset;
+		// yaw[0]=atan2(sqrt((magavg[0]*magavg[0])+(magavg[1]*magavg[1])),
+		// magavg[2]);
+
+		for (int i = 0; i < 9; i++) {
+			roll[i] = -proc.atan2(imuavg[i][0], imuavg[i][2]) * 180 / proc.PI;
+			pitch[i] = proc.atan2(-imuavg[i][1],
+					proc.sqrt((imuavg[i][0] * imuavg[i][0]) + (imuavg[i][2] * imuavg[i][2]))) * 180 / proc.PI;
+			yaw[i] = proc.atan2(proc.sqrt((imuavg[i][1] * imuavg[i][1]) + (imuavg[i][0] * imuavg[i][0])),
+					imuavg[i][2]);
+		}
+		roll[10] = 0;
+		pitch[10] = 0;
+		yaw[10] = 0;
+		for (int i = 0; i < 10; i++) {
+			roll[10] += roll[i];
+			pitch[10] += pitch[i];
+			yaw[10] += yaw[i];
+		}
+//		roll[10] /= 10;
+//		pitch[10] /= 10;
+//		yaw[10] /= 10;
+	}
+
 }
