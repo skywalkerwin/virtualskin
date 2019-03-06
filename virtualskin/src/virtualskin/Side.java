@@ -6,6 +6,7 @@ import processing.serial.Serial;
 
 public class Side {
 	PApplet proc;
+	int debug=0;
 	double[][] imu = new double[10][6];
 	double[][] handimu = new double[7][6];
 	double[][] armimu = new double[7][6];
@@ -57,9 +58,10 @@ public class Side {
 	double a1 = 1 - a;
 	float zoffset = 0f;
 
-	Side(PApplet p, Serial sidePort) {
+	Side(PApplet p, Serial sidePort, int d) {
 		proc = p;
 		port = sidePort;
+		debug =d;
 		for (int i = 0; i < 10; i++) {
 			for (int j = 0; j < 6; j++) {
 				imu[i][j] = 0;
@@ -170,6 +172,14 @@ public class Side {
 				off = off + 1;
 				if (off == nframes) {
 					off = 0;
+				}
+			}
+		}
+		if (debug==1) {
+			for (int i=0;i<6;i++) {
+				imu[2][i]=imu[3][i];
+				for(int j=0;j<nframes;j++) {
+					nimu[2][i][j]=nimu[3][i][j];
 				}
 			}
 		}
