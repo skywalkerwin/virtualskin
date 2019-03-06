@@ -37,18 +37,15 @@ public class Body {
 			proc.rotateX(side.pitch[i] * PConstants.PI / 180);
 			proc.rotateY(side.roll[i] * PConstants.PI / 180);
 			proc.rotateZ(side.yaw[i] * PConstants.PI / 180);
-			proc.translate((float) side.imu[i][0] * dscale, (float) side.imu[i][1] * dscale,
-					(float) side.imu[i][2] * dscale);
-//			strokeWeight((float) imu[1][i][0] / 2);
+//			proc.translate((float) side.imu[i][0] * dscale, (float) side.imu[i][1] * dscale,
+//					(float) side.imu[i][2] * dscale);
 			proc.strokeWeight(1);
 			proc.stroke(255, 0, 0);
-			proc.line(-1000, 0, 0, 1000, 0, 0);
-//			strokeWeight((float) imu[1][i][1] / 2);
+			proc.line(-500, 0, 0, 500, 0, 0);
 			proc.stroke(0, 255, 0);
-			proc.line(0, -1000, 0, 0, 1000, 0);
-//			strokeWeight((float) imu[1][i][2] / 2);
+			proc.line(0, -500, 0, 0, 500, 0);
 			proc.stroke(0, 0, 255);
-			proc.line(0, 0, -1000, 0, 0, 1000);
+			proc.line(0, 0, -500, 0, 0, 500);
 			proc.stroke(0);
 			proc.fill(255);
 			proc.strokeWeight(5);
@@ -58,14 +55,15 @@ public class Body {
 	}
 
 	public void drawBody() {
-//		proc.pushMatrix();
-//		proc.translate(1*proc.width/4,0,0);
-//		testimus(left);
-//		proc.popMatrix();
-//		proc.pushMatrix();
-//		proc.translate(3*proc.width/4,0,0);
-//		testimus(right);
-//		proc.popMatrix();
+		proc.pushMatrix();
+		proc.translate(1*proc.width/4,0,0);
+		testimus(left);
+		proc.popMatrix();
+		proc.pushMatrix();
+		proc.translate(3*proc.width/4,0,0);
+		testimus(right);
+		proc.popMatrix();
+		
 		proc.translate(proc.width / 2, proc.height / 2, 0);
 		proc.rotateX(PConstants.PI/3);
 		proc.translate(0,-500,-500);
@@ -92,19 +90,50 @@ public class Body {
 		proc.translate(d*160,0,225);
 		proc.fill(255);
 		proc.sphere(50);
+		proc.rotateX(-PConstants.PI / 2);
+		proc.rotateX(side.pitch[0] * PConstants.PI / 180);
+		proc.rotateY(side.roll[0] * PConstants.PI / 180);
+		proc.rotateZ(side.yaw[0] * PConstants.PI / 180);
 		proc.translate(d*80,0,-150);
+		proc.strokeWeight(1);
+		proc.stroke(255, 0, 0);
+		proc.line(-500, 0, 0, 500, 0, 0);
+		proc.stroke(0, 255, 0);
+		proc.line(0, -500, 0, 0, 500, 0);
+		proc.stroke(0, 0, 255);
+		proc.line(0, 0, -500, 0, 0, 500);
 		proc.fill(255,0,0);
 		proc.box(100,100,300);
 		proc.translate(0,0,-170);
 		proc.fill(255);
 		proc.sphere(40);
+		proc.rotateX(side.pitch[2] * PConstants.PI / 180);
+		proc.rotateY(side.roll[2] * PConstants.PI / 180);
+		proc.rotateZ(side.yaw[2] * PConstants.PI / 180);
 		proc.translate(00,0,-140);
+		proc.strokeWeight(1);
+		proc.stroke(255, 0, 0);
+		proc.line(-500, 0, 0, 500, 0, 0);
+		proc.stroke(0, 255, 0);
+		proc.line(0, -500, 0, 0, 500, 0);
+		proc.stroke(0, 0, 255);
+		proc.line(0, 0, -500, 0, 0, 500);
 		proc.fill(255,0,0);
 		proc.box(80,80,250);
 		proc.translate(0,0,-140);
 		proc.fill(255);
 		proc.sphere(30);
+		proc.rotateX(side.pitch[9] * PConstants.PI / 180);
+		proc.rotateY(side.roll[9] * PConstants.PI / 180);
+		proc.rotateZ(side.yaw[9] * PConstants.PI / 180);
 		proc.translate(0,0,-60);
+		proc.strokeWeight(1);
+		proc.stroke(255, 0, 0);
+		proc.line(-500, 0, 0, 500, 0, 0);
+		proc.stroke(0, 255, 0);
+		proc.line(0, -500, 0, 0, 500, 0);
+		proc.stroke(0, 0, 255);
+		proc.line(0, 0, -500, 0, 0, 500);
 		proc.fill(255,0,0);
 		proc.box(80,50,90);
 		proc.popMatrix();
