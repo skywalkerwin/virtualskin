@@ -77,7 +77,7 @@ public class processing extends PApplet {
 
 	public void draw() {
 		ortho();
-		background(0);
+		background(50);
 		int m1 = millis();
 		long n1 = System.nanoTime();
 		thread("leftCollect");
