@@ -8,16 +8,16 @@ public class Side {
 	PApplet proc;
 	Body mybody;
 	int debug = 0;
-	double[][] imu = new double[6][6];
+	float[][] imu = new float[6][6];
 //	double[][] handimu = new double[7][6];
 //	double[][] armimu = new double[7][6];
 	// double[][] armimuMAG = new double[3][9];
 	// double [][] imu9 = new double[3][9];
-	double[][] magno = new double[3][9];
+	float[][] magno = new float[3][9];
 	static int histlength = 120;
 	static int nframes = 1;
-	double[][][] nimu = new double[12][6][nframes];
-	double[][][] nmag = new double[3][9][nframes];
+	float[][][] nimu = new float[12][6][nframes];
+	float[][][] nmag = new float[3][9][nframes];
 	int thumbPressure = 0;
 	int[] switches = { 0, 0, 0, 0 };
 	int minpress = 1000;
@@ -37,9 +37,12 @@ public class Side {
 	int clockcount = 0;
 	int off = 0;
 	Serial port;
-	double ascale = .000488;
-	double gscale = .061068;
-
+	float ascale = .000488f;
+	float gscale = .061068f;
+	float GyroMeasError = PI * (40.0f / 180.0f);   // gyroscope measurement error in rads/s (start at 40 deg/s)
+	float GyroMeasDrift = PI * (0.0f  / 180.0f);   // gyroscope measurement drift in rad/s/s (start at 0.0 deg/s/s)
+	float beta = PApplet.sqrt(3.0f / 4.0f) * GyroMeasError;   // compute beta
+	float[][] q = new float[3][4];
 	double gyro[][] = new double[10][3];
 	double angles[][] = new double[10][3];
 	float[] roll = new float[11];// { { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 } };
@@ -58,8 +61,8 @@ public class Side {
 	double a = t / (t + dt);
 	double a1 = 1 - a;
 	float zoffset = 0f;
-	
-	int updated =0;
+	static float PI = PConstants.PI;
+	int updated = 0;
 
 	Side(PApplet p, Body s, Serial sidePort, int d) {
 		proc = p;
@@ -75,11 +78,15 @@ public class Side {
 			for (int j = 0; j < 9; j++) {
 				magno[i][j] = 0;
 			}
+			q[i][0] = 1.0f;
+			q[i][1] = 0f;
+			q[i][2] = 0f;
+			q[i][3] = 0f;
 		}
 	}
 
 	public void serialEvent() {
-		updated=0;
+		updated = 0;
 		if (firstContact == false) {
 			vals = port.readStringUntil(10);
 			PApplet.println(vals);
@@ -193,107 +200,126 @@ public class Side {
 //			}
 //		}
 		calcrpy();
-		updated=1;
+		updated = 1;
 	}
-	float[] q = {1.0f, 0.0f, 0.0f, 0.0f};
-	
-	public void MadgwickQuaternionUpdate(float ax, float ay, float az, float gx, float gy, float gz, float mx, float my, float mz) {
-		//https://github.com/kriswiner/MPU9250/blob/master/quaternionFilters.ino
+
+	public void MadgwickQuaternionUpdate(int i, float ax, float ay, float az, float gx, float gy, float gz, float mx,
+			float my, float mz) {
+		// https://github.com/kriswiner/MPU9250/blob/master/quaternionFilters.ino
 		float deltat = mybody.deltat;
-		float q1 = q[0], q2 = q[1], q3 = q[2], q4 = q[3];   // short name local variable for readability
-        float norm;
-        float hx, hy, _2bx, _2bz;
-        float s1, s2, s3, s4;
-        float qDot1, qDot2, qDot3, qDot4;
+//		deltat=ttime;
+		float q1 = q[i][0], q2 = q[i][1], q3 = q[i][2], q4 = q[i][3]; // short name local variable for readability
+		float norm;
+		float hx, hy, _2bx, _2bz;
+		float s1, s2, s3, s4;
+		float qDot1, qDot2, qDot3, qDot4;
 
-        // Auxiliary variables to avoid repeated arithmetic
-        float _2q1mx;
-        float _2q1my;
-        float _2q1mz;
-        float _2q2mx;
-        float _4bx;
-        float _4bz;
-        float _2q1 = 2.0f * q1;
-        float _2q2 = 2.0f * q2;
-        float _2q3 = 2.0f * q3;
-        float _2q4 = 2.0f * q4;
-        float _2q1q3 = 2.0f * q1 * q3;
-        float _2q3q4 = 2.0f * q3 * q4;
-        float q1q1 = q1 * q1;
-        float q1q2 = q1 * q2;
-        float q1q3 = q1 * q3;
-        float q1q4 = q1 * q4;
-        float q2q2 = q2 * q2;
-        float q2q3 = q2 * q3;
-        float q2q4 = q2 * q4;
-        float q3q3 = q3 * q3;
-        float q3q4 = q3 * q4;
-        float q4q4 = q4 * q4;
-        float beta=0f;
-        // Normalise accelerometer measurement
-        norm = PApplet.sqrt(ax * ax + ay * ay + az * az);
-        if (norm == 0.0f) return; // handle NaN
-        norm = 1.0f/norm;
-        ax *= norm;
-        ay *= norm;
-        az *= norm;
+		// Auxiliary variables to avoid repeated arithmetic
+		float _2q1mx;
+		float _2q1my;
+		float _2q1mz;
+		float _2q2mx;
+		float _4bx;
+		float _4bz;
+		float _2q1 = 2.0f * q1;
+		float _2q2 = 2.0f * q2;
+		float _2q3 = 2.0f * q3;
+		float _2q4 = 2.0f * q4;
+		float _2q1q3 = 2.0f * q1 * q3;
+		float _2q3q4 = 2.0f * q3 * q4;
+		float q1q1 = q1 * q1;
+		float q1q2 = q1 * q2;
+		float q1q3 = q1 * q3;
+		float q1q4 = q1 * q4;
+		float q2q2 = q2 * q2;
+		float q2q3 = q2 * q3;
+		float q2q4 = q2 * q4;
+		float q3q3 = q3 * q3;
+		float q3q4 = q3 * q4;
+		float q4q4 = q4 * q4;
+//		float beta = 0f;
+		// Normalise accelerometer measurement
+		norm = PApplet.sqrt(ax * ax + ay * ay + az * az);
+		if (norm == 0.0f)
+			return; // handle NaN
+		norm = 1.0f / norm;
+		ax *= norm;
+		ay *= norm;
+		az *= norm;
 
-        // Normalise magnetometer measurement
-        norm = PApplet.sqrt(mx * mx + my * my + mz * mz);
-        if (norm == 0.0f) return; // handle NaN
-        norm = 1.0f/norm;
-        mx *= norm;
-        my *= norm;
-        mz *= norm;
+		// Normalise magnetometer measurement
+		norm = PApplet.sqrt(mx * mx + my * my + mz * mz);
+		if (norm == 0.0f)
+			return; // handle NaN
+		norm = 1.0f / norm;
+		mx *= norm;
+		my *= norm;
+		mz *= norm;
 
-        // Reference direction of Earth's magnetic field
-        _2q1mx = 2.0f * q1 * mx;
-        _2q1my = 2.0f * q1 * my;
-        _2q1mz = 2.0f * q1 * mz;
-        _2q2mx = 2.0f * q2 * mx;
-        hx = mx * q1q1 - _2q1my * q4 + _2q1mz * q3 + mx * q2q2 + _2q2 * my * q3 + _2q2 * mz * q4 - mx * q3q3 - mx * q4q4;
-        hy = _2q1mx * q4 + my * q1q1 - _2q1mz * q2 + _2q2mx * q3 - my * q2q2 + my * q3q3 + _2q3 * mz * q4 - my * q4q4;
-        _2bx = PApplet.sqrt(hx * hx + hy * hy);
-        _2bz = -_2q1mx * q3 + _2q1my * q2 + mz * q1q1 + _2q2mx * q4 - mz * q2q2 + _2q3 * my * q4 - mz * q3q3 + mz * q4q4;
-        _4bx = 2.0f * _2bx;
-        _4bz = 2.0f * _2bz;
+		// Reference direction of Earth's magnetic field
+		_2q1mx = 2.0f * q1 * mx;
+		_2q1my = 2.0f * q1 * my;
+		_2q1mz = 2.0f * q1 * mz;
+		_2q2mx = 2.0f * q2 * mx;
+		hx = mx * q1q1 - _2q1my * q4 + _2q1mz * q3 + mx * q2q2 + _2q2 * my * q3 + _2q2 * mz * q4 - mx * q3q3
+				- mx * q4q4;
+		hy = _2q1mx * q4 + my * q1q1 - _2q1mz * q2 + _2q2mx * q3 - my * q2q2 + my * q3q3 + _2q3 * mz * q4 - my * q4q4;
+		_2bx = PApplet.sqrt(hx * hx + hy * hy);
+		_2bz = -_2q1mx * q3 + _2q1my * q2 + mz * q1q1 + _2q2mx * q4 - mz * q2q2 + _2q3 * my * q4 - mz * q3q3
+				+ mz * q4q4;
+		_4bx = 2.0f * _2bx;
+		_4bz = 2.0f * _2bz;
 
-        // Gradient decent algorithm corrective step
-        s1 = -_2q3 * (2.0f * q2q4 - _2q1q3 - ax) + _2q2 * (2.0f * q1q2 + _2q3q4 - ay) - _2bz * q3 * (_2bx * (0.5f - q3q3 - q4q4) + _2bz * (q2q4 - q1q3) - mx) + (-_2bx * q4 + _2bz * q2) * (_2bx * (q2q3 - q1q4) + _2bz * (q1q2 + q3q4) - my) + _2bx * q3 * (_2bx * (q1q3 + q2q4) + _2bz * (0.5f - q2q2 - q3q3) - mz);
-        s2 = _2q4 * (2.0f * q2q4 - _2q1q3 - ax) + _2q1 * (2.0f * q1q2 + _2q3q4 - ay) - 4.0f * q2 * (1.0f - 2.0f * q2q2 - 2.0f * q3q3 - az) + _2bz * q4 * (_2bx * (0.5f - q3q3 - q4q4) + _2bz * (q2q4 - q1q3) - mx) + (_2bx * q3 + _2bz * q1) * (_2bx * (q2q3 - q1q4) + _2bz * (q1q2 + q3q4) - my) + (_2bx * q4 - _4bz * q2) * (_2bx * (q1q3 + q2q4) + _2bz * (0.5f - q2q2 - q3q3) - mz);
-        s3 = -_2q1 * (2.0f * q2q4 - _2q1q3 - ax) + _2q4 * (2.0f * q1q2 + _2q3q4 - ay) - 4.0f * q3 * (1.0f - 2.0f * q2q2 - 2.0f * q3q3 - az) + (-_4bx * q3 - _2bz * q1) * (_2bx * (0.5f - q3q3 - q4q4) + _2bz * (q2q4 - q1q3) - mx) + (_2bx * q2 + _2bz * q4) * (_2bx * (q2q3 - q1q4) + _2bz * (q1q2 + q3q4) - my) + (_2bx * q1 - _4bz * q3) * (_2bx * (q1q3 + q2q4) + _2bz * (0.5f - q2q2 - q3q3) - mz);
-        s4 = _2q2 * (2.0f * q2q4 - _2q1q3 - ax) + _2q3 * (2.0f * q1q2 + _2q3q4 - ay) + (-_4bx * q4 + _2bz * q2) * (_2bx * (0.5f - q3q3 - q4q4) + _2bz * (q2q4 - q1q3) - mx) + (-_2bx * q1 + _2bz * q3) * (_2bx * (q2q3 - q1q4) + _2bz * (q1q2 + q3q4) - my) + _2bx * q2 * (_2bx * (q1q3 + q2q4) + _2bz * (0.5f - q2q2 - q3q3) - mz);
-        norm = PApplet.sqrt(s1 * s1 + s2 * s2 + s3 * s3 + s4 * s4);    // normalise step magnitude
-        norm = 1.0f/norm;
-        s1 *= norm;
-        s2 *= norm;
-        s3 *= norm;
-        s4 *= norm;
+		// Gradient decent algorithm corrective step
+		s1 = -_2q3 * (2.0f * q2q4 - _2q1q3 - ax) + _2q2 * (2.0f * q1q2 + _2q3q4 - ay)
+				- _2bz * q3 * (_2bx * (0.5f - q3q3 - q4q4) + _2bz * (q2q4 - q1q3) - mx)
+				+ (-_2bx * q4 + _2bz * q2) * (_2bx * (q2q3 - q1q4) + _2bz * (q1q2 + q3q4) - my)
+				+ _2bx * q3 * (_2bx * (q1q3 + q2q4) + _2bz * (0.5f - q2q2 - q3q3) - mz);
+		s2 = _2q4 * (2.0f * q2q4 - _2q1q3 - ax) + _2q1 * (2.0f * q1q2 + _2q3q4 - ay)
+				- 4.0f * q2 * (1.0f - 2.0f * q2q2 - 2.0f * q3q3 - az)
+				+ _2bz * q4 * (_2bx * (0.5f - q3q3 - q4q4) + _2bz * (q2q4 - q1q3) - mx)
+				+ (_2bx * q3 + _2bz * q1) * (_2bx * (q2q3 - q1q4) + _2bz * (q1q2 + q3q4) - my)
+				+ (_2bx * q4 - _4bz * q2) * (_2bx * (q1q3 + q2q4) + _2bz * (0.5f - q2q2 - q3q3) - mz);
+		s3 = -_2q1 * (2.0f * q2q4 - _2q1q3 - ax) + _2q4 * (2.0f * q1q2 + _2q3q4 - ay)
+				- 4.0f * q3 * (1.0f - 2.0f * q2q2 - 2.0f * q3q3 - az)
+				+ (-_4bx * q3 - _2bz * q1) * (_2bx * (0.5f - q3q3 - q4q4) + _2bz * (q2q4 - q1q3) - mx)
+				+ (_2bx * q2 + _2bz * q4) * (_2bx * (q2q3 - q1q4) + _2bz * (q1q2 + q3q4) - my)
+				+ (_2bx * q1 - _4bz * q3) * (_2bx * (q1q3 + q2q4) + _2bz * (0.5f - q2q2 - q3q3) - mz);
+		s4 = _2q2 * (2.0f * q2q4 - _2q1q3 - ax) + _2q3 * (2.0f * q1q2 + _2q3q4 - ay)
+				+ (-_4bx * q4 + _2bz * q2) * (_2bx * (0.5f - q3q3 - q4q4) + _2bz * (q2q4 - q1q3) - mx)
+				+ (-_2bx * q1 + _2bz * q3) * (_2bx * (q2q3 - q1q4) + _2bz * (q1q2 + q3q4) - my)
+				+ _2bx * q2 * (_2bx * (q1q3 + q2q4) + _2bz * (0.5f - q2q2 - q3q3) - mz);
+		norm = PApplet.sqrt(s1 * s1 + s2 * s2 + s3 * s3 + s4 * s4); // normalise step magnitude
+		norm = 1.0f / norm;
+		s1 *= norm;
+		s2 *= norm;
+		s3 *= norm;
+		s4 *= norm;
 
-        // Compute rate of change of quaternion
-        qDot1 = 0.5f * (-q2 * gx - q3 * gy - q4 * gz) - beta * s1;
-        qDot2 = 0.5f * (q1 * gx + q3 * gz - q4 * gy) - beta * s2;
-        qDot3 = 0.5f * (q1 * gy - q2 * gz + q4 * gx) - beta * s3;
-        qDot4 = 0.5f * (q1 * gz + q2 * gy - q3 * gx) - beta * s4;
+		// Compute rate of change of quaternion
+		qDot1 = 0.5f * (-q2 * gx - q3 * gy - q4 * gz) - beta * s1;
+		qDot2 = 0.5f * (q1 * gx + q3 * gz - q4 * gy) - beta * s2;
+		qDot3 = 0.5f * (q1 * gy - q2 * gz + q4 * gx) - beta * s3;
+		qDot4 = 0.5f * (q1 * gz + q2 * gy - q3 * gx) - beta * s4;
 
-        // Integrate to yield quaternion
-        q1 += qDot1 * deltat;
-        q2 += qDot2 * deltat;
-        q3 += qDot3 * deltat;
-        q4 += qDot4 * deltat;
-        norm = PApplet.sqrt(q1 * q1 + q2 * q2 + q3 * q3 + q4 * q4);    // normalise quaternion
-        norm = 1.0f/norm;
-        q[0] = q1 * norm;
-        q[1] = q2 * norm;
-        q[2] = q3 * norm;
-        q[3] = q4 * norm;
-
+		// Integrate to yield quaternion
+		q1 += qDot1 * deltat;
+		q2 += qDot2 * deltat;
+		q3 += qDot3 * deltat;
+		q4 += qDot4 * deltat;
+		norm = PApplet.sqrt(q1 * q1 + q2 * q2 + q3 * q3 + q4 * q4); // normalise quaternion
+		norm = 1.0f / norm;
+		q[i][0] = q1 * norm;
+		q[i][1] = q2 * norm;
+		q[i][2] = q3 * norm;
+		q[i][3] = q4 * norm;
+//		PApplet.println(q[i][0], q[i][1], q[i][2], q[i][3] );
 	}
-	
+
 	public void calcrpy() {
 		for (int i = 0; i < 3; i++) {
 			for (int j = 0; j < 9; j++) {
-				magavg[i][j]=0;
+				magavg[i][j] = 0;
 				for (int k = 0; k < nframes; k++) {
 					magavg[i][j] += nmag[i][j][k];
 				}
@@ -305,25 +331,41 @@ public class Side {
 		}
 		for (int i = 0; i < 5; i++) {
 			for (int j = 0; j < 6; j++) {
-				imuavg[i][j]=0;
+				imuavg[i][j] = 0;
 				for (int n = 0; n < nframes; n++) {
 					imuavg[i][j] += nimu[i][j][n];
 				}
 				imuavg[i][j] /= nframes;
 			}
 		}
-		
-//		
+
+		for (int i = 0; i < 3; i++) {
+			MadgwickQuaternionUpdate(i, magno[i][0], magno[i][1], magno[i][2],
+					magno[i][3] * PI / 180.f, magno[i][4] * PI / 180.f, magno[i][5] * PI / 180.f,
+					magno[i][7], magno[i][6], magno[i][8]);
+			yaw[i] = PApplet.atan2(2.0f * (q[i][1] * q[i][2] + q[i][0] * q[i][3]),
+					q[i][0] * q[i][0] + q[i][1] * q[i][1] - q[i][2] * q[i][2] - q[i][3] * q[i][3]);
+			pitch[i] = -PApplet.asin(2.0f * (q[i][1] * q[i][3] - q[i][0] * q[i][2]));
+			roll[i] = PApplet.atan2(2.0f * (q[i][0] * q[i][1] + q[i][2] * q[i][3]),
+					q[i][0] * q[i][0] - q[i][1] * q[i][1] - q[i][2] * q[i][2] + q[i][3] * q[i][3]);
+			pitch[i] *= 180.0f / PI;
+			yaw[i] *= 180.0f / PI;
+//			yaw[i] -= 13.8; // Declination at Danville, California is 13 degrees 48 minutes and 47 seconds
+			roll[i] *= 180.0f / PI;
+//			PApplet.println(pitch[i], roll[i], yaw[i]);
+		}
 //		for (int i = 0; i < 3; i++) {
-//			roll[i] = PApplet.atan2(magavg[i][1], magavg[i][2]) * 180 / PConstants.PI;
-//			pitch[i] = PApplet.atan2(-magavg[i][0], PApplet.sqrt((magavg[i][1] * magavg[i][1]) + (magavg[i][2] * magavg[i][2]))) * 180 / PConstants.PI;
-//			yaw[i] = -PApplet.atan2(magavg[i][6], magavg[i][7]) * 180 / PConstants.PI + zoffset;
+//			roll[i] = PApplet.atan2(magavg[i][1], magavg[i][2]) * 180 / PI;
+//			pitch[i] = PApplet.atan2(-magavg[i][0], PApplet.sqrt((magavg[i][1] * magavg[i][1]) + (magavg[i][2] * magavg[i][2]))) * 180 / PI;
+//			yaw[i] = -PApplet.atan2(magavg[i][6], magavg[i][7]) * 180 / PI + zoffset;
 //		}
 
 		for (int i = 0; i < 5; i++) {
-			roll[i+3] = -PApplet.atan2(imuavg[i][0], imuavg[i][2]) * 180 / PConstants.PI;
-			pitch[i+3] = PApplet.atan2(-imuavg[i][1], PApplet.sqrt((imuavg[i][0] * imuavg[i][0]) + (imuavg[i][2] * imuavg[i][2]))) * 180 / PConstants.PI;
-			yaw[i+3] = PApplet.atan2(PApplet.sqrt((imuavg[i][1] * imuavg[i][1]) + (imuavg[i][0] * imuavg[i][0])), imuavg[i][2]);
+			roll[i + 3] = -PApplet.atan2(imuavg[i][0], imuavg[i][2]) * 180 / PI;
+			pitch[i + 3] = PApplet.atan2(-imuavg[i][1],
+					PApplet.sqrt((imuavg[i][0] * imuavg[i][0]) + (imuavg[i][2] * imuavg[i][2]))) * 180 / PI;
+			yaw[i + 3] = PApplet.atan2(PApplet.sqrt((imuavg[i][1] * imuavg[i][1]) + (imuavg[i][0] * imuavg[i][0])),
+					imuavg[i][2]);
 		}
 
 	}

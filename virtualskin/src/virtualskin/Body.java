@@ -13,6 +13,7 @@ public class Body {
 	float lastUpdate = 0f;
 	float sum = 0f;
 	int sumCount = 0;
+	static float PI = PConstants.PI;
 
 	float roty = 0f;
 
@@ -53,10 +54,10 @@ public class Body {
 //			int dscale = 30;
 			proc.pushMatrix();
 			proc.translate(0, (1 + i) * proc.height / 9, 0);
-			proc.rotateX(PConstants.PI / 2);
-			proc.rotateY(side.roll[i] * PConstants.PI / 180);
-			proc.rotateX(side.pitch[i] * PConstants.PI / 180);
-			proc.rotateZ(side.yaw[i] * PConstants.PI / 180);
+			proc.rotateX(PI / 2);
+			proc.rotateY(side.roll[i] * PI / 180);
+			proc.rotateX(side.pitch[i] * PI / 180);
+			proc.rotateZ(side.yaw[i] * PI / 180);
 //			proc.translate((float) side.imu[i][0] * dscale, (float) side.imu[i][1] * dscale,
 //					(float) side.imu[i][2] * dscale);
 			proc.strokeWeight(1);
@@ -85,7 +86,7 @@ public class Body {
 		proc.popMatrix();
 
 		proc.translate(proc.width / 2, proc.height / 2, 0);
-//		proc.rotateX(PConstants.PI/3);
+//		proc.rotateX(PI/3);
 //		proc.translate(0,-500,-500);
 		torso();
 		head();
@@ -110,10 +111,10 @@ public class Body {
 		proc.translate(d * 160, 0, 225);
 		proc.fill(255);
 		proc.sphere(50);
-//		proc.rotateX(-PConstants.PI / 2);
-		proc.rotateX(side.pitch[0] * PConstants.PI / 180);
-		proc.rotateY(side.roll[0] * PConstants.PI / 180);
-		proc.rotateZ(side.yaw[0] * PConstants.PI / 180);
+//		proc.rotateX(-PI / 2);
+		proc.rotateX(side.pitch[0] * PI / 180);
+		proc.rotateY(side.roll[0] * PI / 180);
+		proc.rotateZ(side.yaw[0] * PI / 180);
 		proc.translate(d * 80, 0, -150);
 		proc.strokeWeight(1);
 		proc.stroke(255, 0, 0);
@@ -127,9 +128,9 @@ public class Body {
 		proc.translate(0, 0, -170);
 		proc.fill(255);
 		proc.sphere(40);
-		proc.rotateX(side.pitch[1] * PConstants.PI / 180);
-		proc.rotateY(side.roll[1] * PConstants.PI / 180);
-		proc.rotateZ(side.yaw[1] * PConstants.PI / 180);
+		proc.rotateX(side.pitch[1] * PI / 180);
+		proc.rotateY(side.roll[1] * PI / 180);
+		proc.rotateZ(side.yaw[1] * PI / 180);
 		proc.translate(00, 0, -140);
 		proc.strokeWeight(1);
 		proc.stroke(255, 0, 0);
@@ -143,9 +144,9 @@ public class Body {
 		proc.translate(0, 0, -140);
 		proc.fill(255);
 		proc.sphere(30);
-		proc.rotateX(side.pitch[2] * PConstants.PI / 180);
-		proc.rotateY(side.roll[2] * PConstants.PI / 180);
-		proc.rotateZ(side.yaw[2] * PConstants.PI / 180);
+		proc.rotateX(side.pitch[2] * PI / 180);
+		proc.rotateY(side.roll[2] * PI / 180);
+		proc.rotateZ(side.yaw[2] * PI / 180);
 		proc.translate(0, 0, -60);
 		proc.strokeWeight(1);
 		proc.stroke(255, 0, 0);
