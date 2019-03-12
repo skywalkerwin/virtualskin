@@ -206,8 +206,8 @@ public class Side {
 	public void MadgwickQuaternionUpdate(int i, float ax, float ay, float az, float gx, float gy, float gz, float mx,
 			float my, float mz) {
 		// https://github.com/kriswiner/MPU9250/blob/master/quaternionFilters.ino
-		float deltat = mybody.deltat;
-//		deltat=ttime;
+//		float deltat = mybody.deltat;
+		float deltat=ttime/1000000.0f;
 		float q1 = q[i][0], q2 = q[i][1], q3 = q[i][2], q4 = q[i][3]; // short name local variable for readability
 		float norm;
 		float hx, hy, _2bx, _2bz;
