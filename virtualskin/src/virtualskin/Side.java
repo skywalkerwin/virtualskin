@@ -39,10 +39,14 @@ public class Side {
 	Serial port;
 	float ascale = .000488f;
 	float gscale = .061068f;
-	float GyroMeasError = PI * (40.0f / 180.0f);   // gyroscope measurement error in rads/s (start at 40 deg/s)
-	float GyroMeasDrift = PI * (0.0f  / 180.0f);   // gyroscope measurement drift in rad/s/s (start at 0.0 deg/s/s)
-	float beta = PApplet.sqrt(3.0f / 4.0f) * GyroMeasError;   // compute beta
-	float[][] q = new float[3][4];
+
+	float deltat = 0f;
+	float GyroMeasError = PI * (40.0f / 180.0f); // gyroscope measurement error in rads/s (start at 40 deg/s)
+	float GyroMeasDrift = PI * (0.0f / 180.0f); // gyroscope measurement drift in rad/s/s (start at 0.0 deg/s/s)
+	float beta = PApplet.sqrt(3.0f / 4.0f) * GyroMeasError; // compute beta
+	float zeta = PApplet.sqrt(3.0f / 4.0f) * GyroMeasDrift;
+	float[][] q = new float[8][4];
+
 	double gyro[][] = new double[10][3];
 	double angles[][] = new double[10][3];
 	float[] roll = new float[11];// { { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 } };
@@ -78,6 +82,8 @@ public class Side {
 			for (int j = 0; j < 9; j++) {
 				magno[i][j] = 0;
 			}
+		}
+		for(int i=0;i<8;i++) {
 			q[i][0] = 1.0f;
 			q[i][1] = 0f;
 			q[i][2] = 0f;
@@ -190,6 +196,7 @@ public class Side {
 					off = 0;
 				}
 			}
+			deltat = ttime / 1000000.0f;
 		}
 //		if (debug == 1) {
 //			for (int i = 0; i < 6; i++) {
@@ -203,11 +210,96 @@ public class Side {
 		updated = 1;
 	}
 
-	public void MadgwickQuaternionUpdate(int i, float ax, float ay, float az, float gx, float gy, float gz, float mx,
-			float my, float mz) {
+	void Madgwick6(int i, float ax, float ay, float az, float gx, float gy, float gz) {
+		float q1 = q[i][0], q2 = q[i][1], q3 = q[i][2], q4 = q[i][3]; // short name local variable for readability
+		float norm; // vector norm
+		float f1, f2, f3; // objetive funcyion elements
+		float J_11or24, J_12or23, J_13or22, J_14or21, J_32, J_33; // objective function Jacobian elements
+		float qDot1, qDot2, qDot3, qDot4;
+		float hatDot1, hatDot2, hatDot3, hatDot4;
+		float gerrx, gerry, gerrz, gbiasx, gbiasy, gbiasz; // gyro bias error
+
+		// Auxiliary variables to avoid repeated arithmetic
+		float _halfq1 = 0.5f * q1;
+		float _halfq2 = 0.5f * q2;
+		float _halfq3 = 0.5f * q3;
+		float _halfq4 = 0.5f * q4;
+		float _2q1 = 2.0f * q1;
+		float _2q2 = 2.0f * q2;
+		float _2q3 = 2.0f * q3;
+		float _2q4 = 2.0f * q4;
+		float _2q1q3 = 2.0f * q1 * q3;
+		float _2q3q4 = 2.0f * q3 * q4;
+
+		// Normalise accelerometer measurement
+		norm = PApplet.sqrt(ax * ax + ay * ay + az * az);
+        if (norm == 0.0f) return; // handle NaN
+		norm = 1.0f / norm;
+		ax *= norm;
+		ay *= norm;
+		az *= norm;
+
+		// Compute the objective function and Jacobian
+		f1 = _2q2 * q4 - _2q1 * q3 - ax;
+		f2 = _2q1 * q2 + _2q3 * q4 - ay;
+		f3 = 1.0f - _2q2 * q2 - _2q3 * q3 - az;
+		J_11or24 = _2q3;
+		J_12or23 = _2q4;
+		J_13or22 = _2q1;
+		J_14or21 = _2q2;
+		J_32 = 2.0f * J_14or21;
+		J_33 = 2.0f * J_11or24;
+
+		// Compute the gradient (matrix multiplication)
+		hatDot1 = J_14or21 * f2 - J_11or24 * f1;
+		hatDot2 = J_12or23 * f1 + J_13or22 * f2 - J_32 * f3;
+		hatDot3 = J_12or23 * f2 - J_33 * f3 - J_13or22 * f1;
+		hatDot4 = J_14or21 * f1 + J_11or24 * f2;
+
+		// Normalize the gradient
+		norm = PApplet.sqrt(hatDot1 * hatDot1 + hatDot2 * hatDot2 + hatDot3 * hatDot3 + hatDot4 * hatDot4);
+		hatDot1 /= norm;
+		hatDot2 /= norm;
+		hatDot3 /= norm;
+		hatDot4 /= norm;
+
+		// Compute estimated gyroscope biases
+		gerrx = _2q1 * hatDot2 - _2q2 * hatDot1 - _2q3 * hatDot4 + _2q4 * hatDot3;
+		gerry = _2q1 * hatDot3 + _2q2 * hatDot4 - _2q3 * hatDot1 - _2q4 * hatDot2;
+		gerrz = _2q1 * hatDot4 - _2q2 * hatDot3 + _2q3 * hatDot2 - _2q4 * hatDot1;
+
+		// Compute and remove gyroscope biases
+//        gbiasx += gerrx * deltat * zeta;
+//        gbiasy += gerry * deltat * zeta;
+//        gbiasz += gerrz * deltat * zeta;
+//        gx -= gbiasx;
+//        gy -= gbiasy;
+//        gz -= gbiasz;
+
+		// Compute the quaternion derivative
+		qDot1 = -_halfq2 * gx - _halfq3 * gy - _halfq4 * gz;
+		qDot2 = _halfq1 * gx + _halfq3 * gz - _halfq4 * gy;
+		qDot3 = _halfq1 * gy - _halfq2 * gz + _halfq4 * gx;
+		qDot4 = _halfq1 * gz + _halfq2 * gy - _halfq3 * gx;
+
+		// Compute then integrate estimated quaternion derivative
+		q1 += (qDot1 - (beta * hatDot1)) * deltat;
+		q2 += (qDot2 - (beta * hatDot2)) * deltat;
+		q3 += (qDot3 - (beta * hatDot3)) * deltat;
+		q4 += (qDot4 - (beta * hatDot4)) * deltat;
+
+		// Normalize the quaternion
+		norm = PApplet.sqrt(q1 * q1 + q2 * q2 + q3 * q3 + q4 * q4); // normalise quaternion
+		norm = 1.0f / norm;
+		q[i][0] = q1 * norm;
+		q[i][1] = q2 * norm;
+		q[i][2] = q3 * norm;
+		q[i][3] = q4 * norm;
+	}
+
+	public void Madgwick9(int i, float ax, float ay, float az, float gx, float gy, float gz, float mx, float my,
+			float mz) {
 		// https://github.com/kriswiner/MPU9250/blob/master/quaternionFilters.ino
-//		float deltat = mybody.deltat;
-		float deltat=ttime/1000000.0f;
 		float q1 = q[i][0], q2 = q[i][1], q3 = q[i][2], q4 = q[i][3]; // short name local variable for readability
 		float norm;
 		float hx, hy, _2bx, _2bz;
@@ -340,9 +432,8 @@ public class Side {
 		}
 
 		for (int i = 0; i < 3; i++) {
-			MadgwickQuaternionUpdate(i, magno[i][0], magno[i][1], magno[i][2],
-					magno[i][3] * PI / 180.f, magno[i][4] * PI / 180.f, magno[i][5] * PI / 180.f,
-					magno[i][7], magno[i][6], magno[i][8]);
+			Madgwick9(i, magno[i][0], magno[i][1], magno[i][2], magno[i][3] * PI / 180.f, magno[i][4] * PI / 180.f,
+					magno[i][5] * PI / 180.f, magno[i][7], magno[i][6], magno[i][8]);
 			yaw[i] = PApplet.atan2(2.0f * (q[i][1] * q[i][2] + q[i][0] * q[i][3]),
 					q[i][0] * q[i][0] + q[i][1] * q[i][1] - q[i][2] * q[i][2] - q[i][3] * q[i][3]);
 			pitch[i] = -PApplet.asin(2.0f * (q[i][1] * q[i][3] - q[i][0] * q[i][2]));
@@ -352,21 +443,35 @@ public class Side {
 			yaw[i] *= 180.0f / PI;
 //			yaw[i] -= 13.8; // Declination at Danville, California is 13 degrees 48 minutes and 47 seconds
 			roll[i] *= 180.0f / PI;
-//			PApplet.println(pitch[i], roll[i], yaw[i]);
+		}
+
+		for (int i = 3; i < 8; i++) {
+			Madgwick6(i, imu[i-3][0], imu[i-3][1], imu[i-3][2], imu[i-3][3] * PI / 180.f, imu[i-3][4] * PI / 180.f,
+					imu[i-3][5] * PI / 180.f);
+			yaw[i] = PApplet.atan2(2.0f * (q[i][1] * q[i][2] + q[i][0] * q[i][3]),
+					q[i][0] * q[i][0] + q[i][1] * q[i][1] - q[i][2] * q[i][2] - q[i][3] * q[i][3]);
+			pitch[i] = -PApplet.asin(2.0f * (q[i][1] * q[i][3] - q[i][0] * q[i][2]));
+			roll[i] = PApplet.atan2(2.0f * (q[i][0] * q[i][1] + q[i][2] * q[i][3]),
+					q[i][0] * q[i][0] - q[i][1] * q[i][1] - q[i][2] * q[i][2] + q[i][3] * q[i][3]);
+			pitch[i] *= 180.0f / PI;
+			yaw[i] *= 180.0f / PI;
+//			yaw[i] -= 13.8; // Declination at Danville, California is 13 degrees 48 minutes and 47 seconds
+			roll[i] *= 180.0f / PI;
+//			proc.println(yaw[i], pitch[i], roll[i]);
 		}
 //		for (int i = 0; i < 3; i++) {
 //			roll[i] = PApplet.atan2(magavg[i][1], magavg[i][2]) * 180 / PI;
 //			pitch[i] = PApplet.atan2(-magavg[i][0], PApplet.sqrt((magavg[i][1] * magavg[i][1]) + (magavg[i][2] * magavg[i][2]))) * 180 / PI;
 //			yaw[i] = -PApplet.atan2(magavg[i][6], magavg[i][7]) * 180 / PI + zoffset;
 //		}
-
-		for (int i = 0; i < 5; i++) {
-			roll[i + 3] = -PApplet.atan2(imuavg[i][0], imuavg[i][2]) * 180 / PI;
-			pitch[i + 3] = PApplet.atan2(-imuavg[i][1],
-					PApplet.sqrt((imuavg[i][0] * imuavg[i][0]) + (imuavg[i][2] * imuavg[i][2]))) * 180 / PI;
-			yaw[i + 3] = PApplet.atan2(PApplet.sqrt((imuavg[i][1] * imuavg[i][1]) + (imuavg[i][0] * imuavg[i][0])),
-					imuavg[i][2]);
-		}
+//
+//		for (int i = 0; i < 5; i++) {
+//			roll[i + 3] = -PApplet.atan2(imuavg[i][0], imuavg[i][2]) * 180 / PI;
+//			pitch[i + 3] = PApplet.atan2(-imuavg[i][1],
+//					PApplet.sqrt((imuavg[i][0] * imuavg[i][0]) + (imuavg[i][2] * imuavg[i][2]))) * 180 / PI;
+//			yaw[i + 3] = PApplet.atan2(PApplet.sqrt((imuavg[i][1] * imuavg[i][1]) + (imuavg[i][0] * imuavg[i][0])),
+//					imuavg[i][2]);
+//		}
 
 	}
 

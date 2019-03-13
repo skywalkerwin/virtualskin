@@ -16,7 +16,7 @@ public class Body {
 	static float PI = PConstants.PI;
 
 	float roty = 0f;
-	int xyz=0;
+	int xyz=1;
 	
 	Body(PApplet p, Serial leftport, Serial rightport) {
 		proc = p;
@@ -55,10 +55,10 @@ public class Body {
 //			int dscale = 30;
 			proc.pushMatrix();
 			proc.translate(0, (1 + i) * proc.height / 9, 0);
-			proc.rotateX(PI / 2);
-			proc.rotateX(side.roll[i] * PI / 180);
-			proc.rotateY(side.pitch[i] * PI / 180);
+			proc.rotateX(-PI / 2);
 			proc.rotateZ(side.yaw[i] * PI / 180);
+			proc.rotateY(-side.pitch[i] * PI / 180);
+			proc.rotateX(-side.roll[i] * PI / 180);
 //			proc.translate((float) side.imu[i][0] * dscale, (float) side.imu[i][1] * dscale,
 //					(float) side.imu[i][2] * dscale);
 			if (i == 0) {
@@ -93,11 +93,11 @@ public class Body {
 		proc.popMatrix();
 
 		proc.translate(proc.width / 2, proc.height / 2, 0);
-		proc.rotateX(PI / 2);
-		proc.rotateZ(roty);
-		roty+=.01;
+		proc.rotateX(-PI / 2);
+//		proc.rotateZ(roty);
+//		roty+=.01;
 //		proc.translate(0,800,200);
-		proc.scale(.5f);
+		proc.scale(.5f,.5f,-.5f);
 		torso();
 		head();
 		arm(left, -1);
@@ -121,12 +121,12 @@ public class Body {
 	public void arm(Side side, int direction) {
 		int d = direction;
 		proc.pushMatrix();
-		proc.translate(d * 160, 0, 200);
+		proc.translate(d * 150, 0, 200);
 		proc.fill(255);	proc.noStroke(); proc.sphere(50);
-		proc.rotateX(side.pitch[0] * PI / 180);
-		proc.rotateY(side.roll[0] * PI / 180);
 		proc.rotateZ(side.yaw[0] * PI / 180);
-		proc.translate(d * 80, 0, -150);
+		proc.rotateY(-side.pitch[0] * PI / 180);
+		proc.rotateX(-side.roll[0] * PI / 180);
+		proc.translate(d * 0, 0, -150);
 		proc.strokeWeight(4);
 		if (xyz == 1) {
 			xyzlines();
@@ -134,9 +134,9 @@ public class Body {
 		proc.stroke(0); proc.fill(0, 255, 0); proc.box(100, 100, 300);
 		proc.translate(0, 0, -170);
 		proc.fill(255); proc.noStroke(); proc.sphere(40);
-		proc.rotateX(side.pitch[1] * PI / 180);
-		proc.rotateY(side.roll[1] * PI / 180);
 		proc.rotateZ(side.yaw[1] * PI / 180);
+		proc.rotateY(-side.pitch[1] * PI / 180);
+		proc.rotateX(-side.roll[1] * PI / 180);
 		proc.translate(00, 0, -140);
 		proc.strokeWeight(3);
 		if (xyz == 1) {
@@ -151,9 +151,9 @@ public class Body {
 	}
 	public void hands(Side side, int direction) {
 		int d = direction;
-		proc.rotateX(side.pitch[2] * PI / 180);
-		proc.rotateY(side.roll[2] * PI / 180);
 		proc.rotateZ(side.yaw[2] * PI / 180);
+		proc.rotateY(-side.pitch[2] * PI / 180);
+		proc.rotateX(-side.roll[2] * PI / 180);
 		proc.translate(0, 0, -60);
 		proc.strokeWeight(2);
 		if (xyz == 1) {
