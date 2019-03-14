@@ -441,7 +441,7 @@ public class Side {
 					q[i][0] * q[i][0] - q[i][1] * q[i][1] - q[i][2] * q[i][2] + q[i][3] * q[i][3]);
 			pitch[i] *= 180.0f / PI;
 			yaw[i] *= 180.0f / PI;
-//			yaw[i] -= 13.8; // Declination at Danville, California is 13 degrees 48 minutes and 47 seconds
+			yaw[i] -= 8; // Declination at Danville, California is 13 degrees 48 minutes and 47 seconds
 			roll[i] *= 180.0f / PI;
 		}
 
@@ -455,7 +455,7 @@ public class Side {
 					q[i][0] * q[i][0] - q[i][1] * q[i][1] - q[i][2] * q[i][2] + q[i][3] * q[i][3]);
 			pitch[i] *= 180.0f / PI;
 			yaw[i] *= 180.0f / PI;
-//			yaw[i] -= 13.8; // Declination at Danville, California is 13 degrees 48 minutes and 47 seconds
+//			yaw[i] -= 30; // Declination at Danville, California is 13 degrees 48 minutes and 47 seconds
 			roll[i] *= 180.0f / PI;
 //			proc.println(yaw[i], pitch[i], roll[i]);
 		}
