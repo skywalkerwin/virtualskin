@@ -103,8 +103,8 @@ public class processing extends PApplet {
 		textSize(40);
 		text(frameRate, 30, 30);
 		counter++;
-		body.drawBody();
-
+//		body.drawBody();
+		body.plots();
 	}
 
 	public void mousePressed() {

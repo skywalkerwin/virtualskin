@@ -87,7 +87,15 @@ public class Body {
 		}
 	}
 
-	
+	public void plots() {
+		left.plotmagno(0);
+		left.plotmagno(1);
+		left.plotmagno(2);
+		left.hcount++;
+		if (left.hcount == left.histlength) {
+			left.hcount = 0;
+		}
+	}
 
 	public void drawBody() {
 		proc.pushMatrix();
@@ -103,12 +111,12 @@ public class Body {
 		proc.rotateX(-PI / 2);
 //		proc.rotateZ(roty);
 //		roty+=.01;
-		proc.scale(.9f);
-//		torso();
-//		head();
+		proc.scale(.5f);
+		torso();
+		head();
 		arm(left, -1);
-//		arm(right, 1);
-//		legs();
+		arm(right, 1);
+		legs();
 	}
 
 	public void head() {
@@ -127,14 +135,19 @@ public class Body {
 	public void arm(Side side, int direction) {
 		int d = direction;
 		proc.pushMatrix();
-//		proc.translate(d * 150, 0, -200);
-		proc.translate(d * 250, 0, -200);
+//		proc.translate(0, 0, -200);
+		proc.translate(d * 200, 0, -200);
 		proc.fill(255);
-		proc.noStroke();
+//		proc.noStroke();
+		proc.stroke(0);
 		proc.sphere(50);
 		proc.rotateZ(side.yaw[0] * PI / 180);
 		proc.rotateX(side.pitch[0] * PI / 180);
 		proc.rotateY(-side.roll[0] * PI / 180);
+//		proc.rotateX(PI / 2);
+//		proc.rotateZ(PI);
+//		
+
 		if (xyz == 1) {
 			xyzlines();
 		}
@@ -145,11 +158,14 @@ public class Body {
 		proc.box(100, 100, -300);
 		proc.translate(0, 0, -170);
 		proc.fill(255);
-		proc.noStroke();
+//		proc.noStroke();
+		proc.stroke(0);
 		proc.sphere(40);
-		proc.rotateY(-side.roll[0] * PI / 180);
+//		proc.rotateZ(-PI);
+//		proc.rotateX(-PI / 2);
+		proc.rotateY(side.roll[0] * PI / 180);
 		proc.rotateX(-side.pitch[0] * PI / 180);
-		proc.rotateZ(side.yaw[0] * PI / 180);
+		proc.rotateZ(-side.yaw[0] * PI / 180);
 		if (xyz == 1) {
 			xyzlines();
 		}
@@ -157,6 +173,8 @@ public class Body {
 		proc.rotateZ(side.yaw[1] * PI / 180);
 		proc.rotateX(side.pitch[1] * PI / 180);
 		proc.rotateY(-side.roll[1] * PI / 180);
+//		proc.rotateX(PI / 2);
+//		proc.rotateZ(PI);
 		proc.translate(00, 0, 140);
 		proc.strokeWeight(3);
 		proc.stroke(0);
@@ -164,7 +182,8 @@ public class Body {
 		proc.box(80, 80, -250);
 		proc.translate(0, 0, 140);
 		proc.fill(255);
-		proc.noStroke();
+//		proc.noStroke();
+		proc.stroke(0);
 		proc.sphere(30);
 		hands(side, 1);
 		proc.popMatrix();
@@ -199,8 +218,9 @@ public class Body {
 		proc.stroke(0);
 		proc.box(300, 150, -450);
 		proc.translate(0, 0, 230);
-		proc.noStroke();
 		proc.fill(255);
+//		proc.noStroke();
+		proc.stroke(0);;
 		proc.sphere(75);
 		proc.popMatrix();
 	}
@@ -215,7 +235,8 @@ public class Body {
 		proc.box(125, 125, -350);
 		proc.translate(0, 0, 180);
 		proc.fill(255);
-		proc.noStroke();
+//		proc.noStroke();
+		proc.stroke(0);
 		proc.sphere(40);
 		proc.stroke(0);
 		proc.translate(0, 0, 160);
@@ -223,7 +244,8 @@ public class Body {
 		proc.box(100, 100, -270);
 		proc.translate(0, 0, 140);
 		proc.fill(255);
-		proc.noStroke();
+//		proc.noStroke();
+		proc.stroke(0);
 		proc.sphere(30);
 		proc.stroke(0);
 		proc.translate(0, -50, 50);
@@ -241,7 +263,7 @@ public class Body {
 
 	public void xyzlines() {
 		proc.pushMatrix();
-		int len = 200;
+		int len = 300;
 		proc.stroke(255, 0, 0);
 		proc.line(0, 0, 0, len, 0, 0);
 		proc.stroke(0, 255, 0);
