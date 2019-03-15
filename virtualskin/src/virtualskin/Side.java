@@ -131,7 +131,7 @@ public class Side {
 						magno[i][8] = ((inBuffer[16 + (i * 18)] << 8 | inBuffer[17 + (i * 18)] & 0xff));
 						for (int j = 0; j < 9; j++) {
 							if (magno[i][j] > negcheck) {
-								magno[i][j] = -(magno[i][j]);// - negcheck);
+								magno[i][j] = -(magno[i][j]);// - negcheck);??????????????????????
 							}
 							if (j < 3) {
 								magno[i][j] = magno[i][j] * ascale;
