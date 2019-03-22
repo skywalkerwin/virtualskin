@@ -14,14 +14,22 @@ public class Side {
 	float[][] magno = new float[3][9];
 
 	// sensor history
-	int hcount = 0;
-	static int histlength = 120;
-	static int nframes = 1;
-	float[][][] mhist = new float[3][9][histlength];
-	float[][][] ihist = new float[5][6][histlength];
-	float[][][] nimu = new float[12][6][nframes];
-	float[][][] nmag = new float[3][9][nframes];
-	float[] magadj = { 176, 176, 165 };
+	private static int histlength = 180;
+	private static int nframes = 1;
+	private int hcount = 0;
+	private float[][][] mhist = new float[3][9][histlength];
+	private float[][][] ihist = new float[5][6][histlength];
+	private float[][][] nimu = new float[12][6][nframes];
+	private float[][][] nmag = new float[3][9][nframes];
+	private float[] magadj = { 176, 176, 165 };
+	private float[] ypltscales = { 16f, 2000f, 1000f };
+
+	float magmin[][] = { { 60000, 60000, 60000 }, { 60000, 60000, 60000 }, { 60000, 60000, 60000 } };
+	float magmax[][] = { { -60000, -60000, -60000 }, { -60000, -60000, -60000 }, { -60000, -60000, -60000 } };
+	float magbias[][] = { { 0, 0, 0 }, { 0, 0, 0 }, { 0, 0, 0 } };
+	float magscale[][] = { { 1, 1, 1 }, { 1, 1, 1 }, { 1, 1, 1 } };
+	float avgrad[] = { 1, 1, 1 };
+	float scalebias[][] = { { 1, 1, 1 }, { 1, 1, 1 }, { 1, 1, 1 } };
 
 	// touch values
 	int ttime = 0;
@@ -129,16 +137,31 @@ public class Side {
 						magno[i][6] = ((inBuffer[12 + (i * 18)] << 8 | inBuffer[13 + (i * 18)] & 0xff));
 						magno[i][7] = ((inBuffer[14 + (i * 18)] << 8 | inBuffer[15 + (i * 18)] & 0xff));
 						magno[i][8] = ((inBuffer[16 + (i * 18)] << 8 | inBuffer[17 + (i * 18)] & 0xff));
+
 						for (int j = 0; j < 9; j++) {
 							if (magno[i][j] > negcheck) {
-								magno[i][j] = -(magno[i][j]);// - negcheck);??????????????????????
+//								magno[i][j] = -(magno[i][j] - negcheck);//??????????????????????
 							}
 							if (j < 3) {
 								magno[i][j] = magno[i][j] * ascale;
 							} else if (j > 2 && j < 6) {
 								magno[i][j] = magno[i][j] * gscale;
 							} else {
-								magno[i][j] = magno[i][j];
+//								magno[i][j-6] = magno[i][j-6];
+								if (magno[i][j] > magmax[i][j - 6]) {
+									magmax[i][j - 6] = magno[i][j];
+								}
+								if (magno[i][j] < magmin[i][j - 6]) {
+									magmin[i][j - 6] = magno[i][j];
+								}
+								magbias[i][j - 6] = (magmax[i][j - 6] + magmin[i][j - 6]) / 2;
+								magscale[i][j - 6] = (magmax[i][j - 6] - magmin[i][j - 6]) / 2;
+								avgrad[i] = (magscale[i][0] + magscale[i][1] + magscale[i][2]) / 3;
+								if (magscale[i][j - 6] != 0) {
+									scalebias[i][j - 6] = avgrad[i] / magscale[i][j - 6];
+								}
+								magno[i][j] -= magbias[i][j - 6];
+									magno[i][j] *= scalebias[i][j - 6];	
 							}
 //								magno[i][j]=(float)(magno[i][j]*(((magadj[(-6+j)]-128) *.5)/128)+1);
 						}
@@ -161,7 +184,7 @@ public class Side {
 
 						for (int j = 0; j < 6; j++) {
 							if (imu[i][j] > negcheck) {
-								imu[i][j] = -(imu[i][j] - negcheck);
+//								imu[i][j] = -(imu[i][j] - negcheck);
 							}
 							if (j < 3) {
 								imu[i][j] = imu[i][j] * ascale;
@@ -200,48 +223,185 @@ public class Side {
 			deltat = ttime / 1000000.0f;
 		}
 		sensorfusion();
+		proc.println("MAX");
+		proc.printArray(magmax[0]);
+		proc.println("MIN");
+		proc.printArray(magmin[0]);
+		proc.println("bias");
+		proc.printArray(magbias[0]);
+		proc.println("scale");
+		proc.printArray(magscale[0]);
+		proc.println("avg rad");
+		proc.printArray(avgrad[0]);
+		proc.println("scale bias");
+		proc.printArray(scalebias[0]);
 		updated = 1;
-	}
-
-
-//	int c1 = proc.color(255,0,0);
-//	int c2 = proc.color(0,255,0);
-//	int c3 = proc.color(0,0,255);
-//	int[] c = {c1, c2, c3};
-	void plotmagno(int i) {
-//		float yscale = (proc.height/2)/negcheck;
-		float yscale=.000001f;
-		float xscale = proc.width/(histlength+5);
-		int c1 = proc.color(255,0,0);
-		int c2 = proc.color(0,255,0);
-		int c3 = proc.color(0,0,255);
-		int[] c = {c1, c2, c3};
-		proc.pushMatrix();
-		proc.stroke(c[i]);
-		proc.translate(50, 0, 0);
-		proc.pushMatrix();
-		proc.translate(0, proc.height / 2, 0);
-		
-		int hptr = hcount;
-		for (int j = 6; j < 9; j++) {
-			for (int k = hptr; k > 0; k--) {
-				proc.line((hptr-k)*xscale, mhist[i][j][k]*yscale, (hptr-k+1)*xscale, mhist[i][j][k-1]);
-			}
-			proc.line((hptr)*xscale, mhist[i][j][0]*yscale, (hptr+1)*xscale, mhist[i][j][histlength-1]*yscale);
-			for (int k = histlength-1; k > hptr+1; k--) {
-				proc.line((hptr+(histlength-k))*xscale, mhist[i][j][k]*yscale, (hptr+(histlength-k)+1)*xscale, mhist[i][j][k-1]);
-			}
-		}
-
-		proc.popMatrix();
-		proc.popMatrix();
 		hcount++;
 		if (hcount == histlength) {
 			hcount = 0;
 		}
 	}
 
-	void Madgwick6(int i, float ax, float ay, float az, float gx, float gy, float gz) {
+	public void plot6Lines(int i, int n) {
+		int offset = n * 3;
+		float pheight = proc.height;
+		float pwidth = proc.width;
+		float yscale = (pheight / 2) / ypltscales[n];
+		float xscale = pwidth / (histlength + 5);
+		int c1 = proc.color(255, 0, 0);
+		int c2 = proc.color(0, 255, 0);
+		int c3 = proc.color(0, 0, 255);
+		int[] c = { c1, c2, c3 };
+		proc.pushMatrix();
+		proc.translate(50, 0, 0);
+		proc.translate(0, pheight / 2, 0);
+		proc.stroke(255);
+		proc.strokeWeight(1);
+		proc.line(0, 0, (pwidth * (histlength - 1) / (histlength + 4)), 0);
+		proc.line(0, -pheight / 2, 0, pheight / 2);
+		proc.line((pwidth * (histlength - 1) / (histlength + 4)), -pheight / 2,
+				(pwidth * (histlength - 1) / (histlength + 4)), pheight / 2);
+		proc.box(10);
+		int hptr = hcount;
+		int firsthalf = histlength - hptr - 1;
+		for (int j = offset; j < offset + 3; j++) {
+			proc.stroke(c[j - offset]);
+			for (int k = 0; k < firsthalf; k++) {
+				proc.line((k) * xscale, ihist[i][j][hptr + k] * yscale, (k + 1) * xscale,
+						ihist[i][j][hptr + k + 1] * yscale);
+			}
+			proc.line((histlength - hptr - 1) * xscale, ihist[i][j][histlength - 1] * yscale,
+					(histlength - hptr) * xscale, ihist[i][j][0] * yscale);
+			for (int k = 0; k < hptr; k++) {
+				proc.line((histlength - hptr + k) * xscale, ihist[i][j][k] * yscale,
+						(histlength - hptr + k + 1) * xscale, ihist[i][j][k + 1] * yscale);
+
+			}
+		}
+		proc.popMatrix();
+	}
+
+	public void plot6Points(int i, int n) {
+		int offset = n * 3;
+		float pheight = proc.height;
+		float pwidth = proc.width;
+		float yscale = (pheight / 2) / ypltscales[n];
+		float xscale = pwidth / (histlength + 5);
+		int c1 = proc.color(255, 0, 0);
+		int c2 = proc.color(0, 255, 0);
+		int c3 = proc.color(0, 0, 255);
+		int[] c = { c1, c2, c3 };
+		proc.pushMatrix();
+		proc.translate(50, 0, 0);
+		proc.translate(0, pheight / 2, 0);
+		proc.stroke(255);
+		proc.strokeWeight(1);
+		proc.line(0, 0, (pwidth * (histlength - 1) / (histlength + 4)), 0);
+		proc.line(0, -pheight / 2, 0, pheight / 2);
+		proc.line((pwidth * (histlength - 1) / (histlength + 4)), -pheight / 2,
+				(pwidth * (histlength - 1) / (histlength + 4)), pheight / 2);
+		proc.box(10);
+		int hptr = hcount;
+		int firsthalf = histlength - hptr - 1;
+		for (int j = offset; j < offset + 3; j++) {
+			proc.stroke(c[j - offset]);
+			for (int k = 0; k < firsthalf; k++) {
+				proc.point((k) * xscale, ihist[i][j][hptr + k] * yscale, 0);
+				proc.point((k + 1) * xscale, ihist[i][j][hptr + k + 1] * yscale, 0);
+			}
+			proc.point((histlength - hptr - 1) * xscale, ihist[i][j][histlength - 1] * yscale, 0);
+			proc.point((histlength - hptr) * xscale, ihist[i][j][0] * yscale, 0);
+			for (int k = 0; k < hptr; k++) {
+				proc.point((histlength - hptr + k) * xscale, ihist[i][j][k] * yscale, 0);
+				proc.point((histlength - hptr + k + 1) * xscale, ihist[i][j][k + 1] * yscale, 0);
+
+			}
+		}
+		proc.popMatrix();
+	}
+
+	public void plot9Lines(int i, int n) {
+//		proc.println(i);
+//		proc.printArray(magno[i]);
+//		proc.println();
+		int offset = n * 3;
+		float pheight = proc.height;
+		float pwidth = proc.width;
+		float yscale = (pheight / 2) / ypltscales[n];
+		float xscale = pwidth / (histlength + 5);
+		int c1 = proc.color(255, 0, 0);
+		int c2 = proc.color(0, 255, 0);
+		int c3 = proc.color(0, 0, 255);
+		int[] c = { c1, c2, c3 };
+		proc.pushMatrix();
+		proc.translate(50, 0, 0);
+		proc.translate(0, pheight / 2, 0);
+		proc.stroke(255);
+		proc.strokeWeight(1);
+		proc.line(0, 0, (pwidth * (histlength - 1) / (histlength + 4)), 0);
+		proc.line(0, -pheight / 2, 0, pheight / 2);
+		proc.line((pwidth * (histlength - 1) / (histlength + 4)), -pheight / 2,
+				(pwidth * (histlength - 1) / (histlength + 4)), pheight / 2);
+		proc.box(10);
+		int hptr = hcount;
+		int firsthalf = histlength - hptr - 1;
+		for (int j = offset; j < offset + 3; j++) {
+			proc.stroke(c[j - offset]);
+			for (int k = 0; k < firsthalf; k++) {
+				proc.line((k) * xscale, -mhist[i][j][hptr + k] * yscale, (k + 1) * xscale,
+						-mhist[i][j][hptr + k + 1] * yscale);
+			}
+			proc.line((histlength - hptr - 1) * xscale, -mhist[i][j][histlength - 1] * yscale,
+					(histlength - hptr) * xscale, -mhist[i][j][0] * yscale);
+			for (int k = 0; k < hptr; k++) {
+				proc.line((histlength - hptr + k) * xscale, -mhist[i][j][k] * yscale,
+						(histlength - hptr + k + 1) * xscale, -mhist[i][j][k + 1] * yscale);
+
+			}
+		}
+		proc.popMatrix();
+	}
+
+	public void plot9Points(int i, int n) {
+		int offset = n * 3;
+		float pheight = proc.height;
+		float pwidth = proc.width;
+		float yscale = (pheight / 2) / ypltscales[n];
+		float xscale = pwidth / (histlength + 5);
+		int c1 = proc.color(255, 0, 0);
+		int c2 = proc.color(0, 255, 0);
+		int c3 = proc.color(0, 0, 255);
+		int[] c = { c1, c2, c3 };
+		proc.pushMatrix();
+		proc.translate(50, 0, 0);
+		proc.translate(0, pheight / 2, 0);
+		proc.stroke(255);
+		proc.strokeWeight(5);
+		proc.line(0, 0, (pwidth * (histlength - 1) / (histlength + 4)), 0);
+		proc.line(0, -pheight / 2, 0, pheight / 2);
+		proc.line((pwidth * (histlength - 1) / (histlength + 4)), -pheight / 2,
+				(pwidth * (histlength - 1) / (histlength + 4)), pheight / 2);
+		proc.box(10);
+		int hptr = hcount;
+		int firsthalf = histlength - hptr - 1;
+		for (int j = offset; j < offset + 3; j++) {
+			proc.stroke(c[j - offset]);
+			for (int k = 0; k < firsthalf; k++) {
+				proc.point((k) * xscale, -mhist[i][j][hptr + k] * yscale, 0);
+				proc.point((k + 1) * xscale, -mhist[i][j][hptr + k + 1] * yscale, 0);
+			}
+			proc.point((histlength - hptr - 1) * xscale, -mhist[i][j][histlength - 1] * yscale, 0);
+			proc.point((histlength - hptr) * xscale, -mhist[i][j][0] * yscale, 0);
+			for (int k = 0; k < hptr; k++) {
+				proc.point((histlength - hptr + k) * xscale, -mhist[i][j][k] * yscale, 0);
+				proc.point((histlength - hptr + k + 1) * xscale, -mhist[i][j][k + 1] * yscale, 0);
+
+			}
+		}
+		proc.popMatrix();
+	}
+
+	public void Madgwick6(int i, float ax, float ay, float az, float gx, float gy, float gz) {
 		float q1 = q[i][0], q2 = q[i][1], q3 = q[i][2], q4 = q[i][3]; // short name local variable for readability
 		float norm; // vector norm
 		float f1, f2, f3; // objetive funcyion elements
@@ -451,7 +611,7 @@ public class Side {
 					q[i][0] * q[i][0] - q[i][1] * q[i][1] - q[i][2] * q[i][2] + q[i][3] * q[i][3]);
 			pitch[i] *= 180.0f / PI;
 			yaw[i] *= 180.0f / PI;
-			yaw[i] -= 8; // Declination at Danville, California is 13 degrees 48 minutes and 47 seconds
+//			yaw[i] -= 8; // Declination at Danville, California is 13 degrees 48 minutes and 47 seconds
 			roll[i] *= 180.0f / PI;
 		}
 
