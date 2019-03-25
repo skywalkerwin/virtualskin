@@ -41,7 +41,7 @@ public class processing extends PApplet {
 	}
 
 	public void setup() {
-		frameRate(60);
+		frameRate(120);
 		background(0);
 		ellipseMode(RADIUS);
 
@@ -77,34 +77,34 @@ public class processing extends PApplet {
 
 	public void draw() {
 		ortho();
-		background(50);
-		int m1 = millis();
-		long n1 = System.nanoTime();
+		background(0);
+//		int m1 = millis();
+//		long n1 = System.nanoTime();
 		thread("leftCollect");
 		thread("rightCollect");
-		body.printSendTimes();
+//		body.printSendTimes();
 //		body.printTRPY();
-		int m2 = millis();
-		long n2 = System.nanoTime();
+//		int m2 = millis();
+//		long n2 = System.nanoTime();
 		body.verifyUpdate();
-		int m3 = m2 - m1;
-		long n3 = n2 - n1;
-		totalnano += n3;
-		avgnano = totalnano / (counter + 1);
-		println("TOTAL MILLIS CYCLE TIME: ", m3);
-		println("TOTAL NANO CYCLE TIME:   ", n3);
-		println();
-		println("COUNTER: ", counter);
-		println("AVERAGE NANO CYCLE TIME: ", avgnano);
+//		int m3 = m2 - m1;
+//		long n3 = n2 - n1;
+//		totalnano += n3;
+//		avgnano = totalnano / (counter + 1);
+//		println("TOTAL MILLIS CYCLE TIME: ", m3);
+//		println("TOTAL NANO CYCLE TIME:   ", n3);
+//		println();
+//		println("COUNTER: ", counter);
+//		println("AVERAGE NANO CYCLE TIME: ", avgnano);
 
 		strokeWeight(3);
 		stroke(255);
 		fill(255);
-		textSize(40);
-		text(frameRate, 30, 30);
+		textSize(30);
+		text(frameRate, 20, 20);
 		counter++;
 		body.drawBody();
-
+//		body.plots();
 	}
 
 	public void mousePressed() {

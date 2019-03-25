@@ -8,16 +8,32 @@ public class Side {
 	PApplet proc;
 	Body mybody;
 	int debug = 0;
+
+	// current sensor values
 	float[][] imu = new float[6][6];
-//	double[][] handimu = new double[7][6];
-//	double[][] armimu = new double[7][6];
-	// double[][] armimuMAG = new double[3][9];
-	// double [][] imu9 = new double[3][9];
 	float[][] magno = new float[3][9];
-	static int histlength = 120;
-	static int nframes = 1;
-	float[][][] nimu = new float[12][6][nframes];
-	float[][][] nmag = new float[3][9][nframes];
+
+	// sensor history
+	private static int histlength = 180;
+	private static int nframes = 1;
+	private int hcount = 0;
+	private float[][][] mhist = new float[3][9][histlength];
+	private float[][][] ihist = new float[5][6][histlength];
+	private float[][][] nimu = new float[12][6][nframes];
+	private float[][][] nmag = new float[3][9][nframes];
+	private float[] magadj = { 176, 176, 165 };
+	private float[] ypltscales = { 16f, 2000f, 1000f };
+
+	float magmin[][] = { { 60000, 60000, 60000 }, { 60000, 60000, 60000 }, { 60000, 60000, 60000 } };
+	float magmax[][] = { { -60000, -60000, -60000 }, { -60000, -60000, -60000 }, { -60000, -60000, -60000 } };
+	float magbias[][] = { { 0, 0, 0 }, { 0, 0, 0 }, { 0, 0, 0 } };
+	float magscale[][] = { { 1, 1, 1 }, { 1, 1, 1 }, { 1, 1, 1 } };
+	float avgrad[] = { 1, 1, 1 };
+	float scalebias[][] = { { 1, 1, 1 }, { 1, 1, 1 }, { 1, 1, 1 } };
+
+	// touch values
+	int ttime = 0;
+	int switchbinary = 0;
 	int thumbPressure = 0;
 	int[] switches = { 0, 0, 0, 0 };
 	int minpress = 1000;
@@ -26,20 +42,21 @@ public class Side {
 	double normpress = 0;
 	double[] presst = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 	double totalPress = 0;
-	int switchbinary = 0;
 
-	int[] magadj = { 176, 176, 165 };
-	int ttime = 0;
+	// serial communication variables
+	Serial port;
 	String vals = " ";
 	boolean firstContact = false;
 	byte[] inBuffer = new byte[134];
-	static int negcheck = 32767;
-	int clockcount = 0;
 	int off = 0;
-	Serial port;
+	int clockcount = 0;
+	int updated = 0;
 	float ascale = .000488f;
 	float gscale = .061068f;
+	static int negcheck = 32767;
+	static float PI = PConstants.PI;
 
+	// sensor fusion stuff
 	float deltat = 0f;
 	float GyroMeasError = PI * (40.0f / 180.0f); // gyroscope measurement error in rads/s (start at 40 deg/s)
 	float GyroMeasDrift = PI * (0.0f / 180.0f); // gyroscope measurement drift in rad/s/s (start at 0.0 deg/s/s)
@@ -47,26 +64,23 @@ public class Side {
 	float zeta = PApplet.sqrt(3.0f / 4.0f) * GyroMeasDrift;
 	float[][] q = new float[8][4];
 
-	double gyro[][] = new double[10][3];
-	double angles[][] = new double[10][3];
+	// roll pitch yaw
 	float[] roll = new float[11];// { { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 } };
 	float[] pitch = new float[11];// { { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 } };
 	float[] yaw = new float[11];// { { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 } };
-	float sroll = 0;
-	float spitch = 0;
-	float syaw = 0;
-	float troll = 0;
-	float tpitch = 0;
-	float tyaw = 0;
-	float[][] magavg = new float[3][9];
-	float[][] imuavg = new float[10][6];
-	double dt = .001;
-	double t = .002;
-	double a = t / (t + dt);
-	double a1 = 1 - a;
-	float zoffset = 0f;
-	static float PI = PConstants.PI;
-	int updated = 0;
+
+	float mx=0f;
+	float my=0f;
+	float mz=0f;
+//	float[][] magavg = new float[3][9];
+//	float[][] imuavg = new float[10][6];
+//	double gyro[][] = new double[10][3];
+//	double angles[][] = new double[10][3];
+//	double dt = .001;
+//	double t = .002;
+//	double a = t / (t + dt);
+//	double a1 = 1 - a;
+//	float zoffset = 0f;
 
 	Side(PApplet p, Body s, Serial sidePort, int d) {
 		proc = p;
@@ -76,14 +90,20 @@ public class Side {
 		for (int i = 0; i < 5; i++) {
 			for (int j = 0; j < 6; j++) {
 				imu[i][j] = 0;
+				for (int k = 0; k < histlength; k++) {
+					ihist[i][j][k] = 0;
+				}
 			}
 		}
 		for (int i = 0; i < 3; i++) {
 			for (int j = 0; j < 9; j++) {
 				magno[i][j] = 0;
+				for (int k = 0; k < histlength; k++) {
+					mhist[i][j][k] = 0;
+				}
 			}
 		}
-		for(int i=0;i<8;i++) {
+		for (int i = 0; i < 8; i++) {
 			q[i][0] = 1.0f;
 			q[i][1] = 0f;
 			q[i][2] = 0f;
@@ -106,76 +126,83 @@ public class Side {
 				inBuffer = port.readBytes(122);
 				port.write("A");
 				if (inBuffer != null) {
+					// 3x imu9
 					for (int i = 0; i < 3; i++) {
-						// accel
+						// ACCEL
 						magno[i][0] = ((inBuffer[0 + (i * 18)] << 8 | inBuffer[1 + (i * 18)] & 0xff));
 						magno[i][1] = ((inBuffer[2 + (i * 18)] << 8 | inBuffer[3 + (i * 18)] & 0xff));
 						magno[i][2] = ((inBuffer[4 + (i * 18)] << 8 | inBuffer[5 + (i * 18)] & 0xff));
-						// gyro
+						// GYRO
 						magno[i][3] = ((inBuffer[6 + (i * 18)] << 8 | inBuffer[7 + (i * 18)] & 0xff));
 						magno[i][4] = ((inBuffer[8 + (i * 18)] << 8 | inBuffer[9 + (i * 18)] & 0xff));
 						magno[i][5] = ((inBuffer[10 + (i * 18)] << 8 | inBuffer[11 + (i * 18)] & 0xff));
-						// mag
+						// MAGNO
 						magno[i][6] = ((inBuffer[12 + (i * 18)] << 8 | inBuffer[13 + (i * 18)] & 0xff));
 						magno[i][7] = ((inBuffer[14 + (i * 18)] << 8 | inBuffer[15 + (i * 18)] & 0xff));
 						magno[i][8] = ((inBuffer[16 + (i * 18)] << 8 | inBuffer[17 + (i * 18)] & 0xff));
+
 						for (int j = 0; j < 9; j++) {
 							if (magno[i][j] > negcheck) {
-								magno[i][j] = -1 * magno[i][j];
+//								magno[i][j] = -(magno[i][j] - negcheck);//??????????????????????
 							}
 							if (j < 3) {
 								magno[i][j] = magno[i][j] * ascale;
-							}
-							if (j > 2 && j < 6) {
+							} else if (j > 2 && j < 6) {
 								magno[i][j] = magno[i][j] * gscale;
+							} else {
+//								magno[i][j-6] = magno[i][j-6];
+								if (magno[i][j] > magmax[i][j - 6]) {
+									magmax[i][j - 6] = magno[i][j];
+								}
+								if (magno[i][j] < magmin[i][j - 6]) {
+									magmin[i][j - 6] = magno[i][j];
+								}
+								magbias[i][j - 6] = (magmax[i][j - 6] + magmin[i][j - 6]) / 2;
+								magscale[i][j - 6] = (magmax[i][j - 6] - magmin[i][j - 6]) / 2;
+								avgrad[i] = (magscale[i][0] + magscale[i][1] + magscale[i][2]) / 3;
+								if (magscale[i][j - 6] != 0) {
+									scalebias[i][j - 6] = avgrad[i] / magscale[i][j - 6];
+								}
+								magno[i][j] -= magbias[i][j - 6];
+									magno[i][j] *= scalebias[i][j - 6];	
 							}
-							if (j > 5) {
-								magno[i][j] = magno[i][j];
-							}
+//								magno[i][j]=(float)(magno[i][j]*(((magadj[(-6+j)]-128) *.5)/128)+1);
 						}
+						// APPEND TO HISTORIES
 						for (int j = 0; j < 9; j++) {
 							nmag[i][j][off] = magno[i][j];
+							mhist[i][j][hcount] = magno[i][j];
 						}
-//						for (int i = 0; i < 6; i++) {
-//							imu[9][i] = magno[i][j];
-//						}
-//						for (int i = 0; i < 6; i++) {
-//							nimu[9][i][off] = imu[9][i];
-//						}
 					}
-					for (int readnum = 0; readnum < 5; readnum++) {
-						imu[readnum][0] = ((inBuffer[54 + (readnum * 12)] << 8)
-								| (inBuffer[55 + (readnum * 12)] & 0xff));
-						imu[readnum][1] = ((inBuffer[56 + (readnum * 12)] << 8)
-								| (inBuffer[57 + (readnum * 12)] & 0xff));
-						imu[readnum][2] = ((inBuffer[58 + (readnum * 12)] << 8)
-								| (inBuffer[59 + (readnum * 12)] & 0xff));
-						imu[readnum][3] = ((inBuffer[60 + (readnum * 12)] << 8)
-								| (inBuffer[61 + (readnum * 12)] & 0xff));
-						imu[readnum][4] = ((inBuffer[62 + (readnum * 12)] << 8)
-								| (inBuffer[63 + (readnum * 12)] & 0xff));
-						imu[readnum][5] = ((inBuffer[64 + (readnum * 12)] << 8)
-								| (inBuffer[65 + (readnum * 12)] & 0xff));
-						for (int i = 0; i < 3; i++) {
-							if (imu[readnum][i] > negcheck) {
-								imu[readnum][i] = (-(imu[readnum][i] - negcheck) * ascale);
-							} else {
-								imu[readnum][i] = imu[readnum][i] * ascale;
+					// 5x imu6
+					for (int i = 0; i < 5; i++) {
+						// ACCEL
+						imu[i][0] = ((inBuffer[54 + (i * 12)] << 8) | (inBuffer[55 + (i * 12)] & 0xff));
+						imu[i][1] = ((inBuffer[56 + (i * 12)] << 8) | (inBuffer[57 + (i * 12)] & 0xff));
+						imu[i][2] = ((inBuffer[58 + (i * 12)] << 8) | (inBuffer[59 + (i * 12)] & 0xff));
+						// GYRO
+						imu[i][3] = ((inBuffer[60 + (i * 12)] << 8) | (inBuffer[61 + (i * 12)] & 0xff));
+						imu[i][4] = ((inBuffer[62 + (i * 12)] << 8) | (inBuffer[63 + (i * 12)] & 0xff));
+						imu[i][5] = ((inBuffer[64 + (i * 12)] << 8) | (inBuffer[65 + (i * 12)] & 0xff));
+
+						for (int j = 0; j < 6; j++) {
+							if (imu[i][j] > negcheck) {
+//								imu[i][j] = -(imu[i][j] - negcheck);
 							}
-						}
-						for (int i = 3; i < 6; i++) {
-							if (imu[readnum][i] > negcheck) {
-								imu[readnum][i] = (-(imu[readnum][i] - negcheck) * gscale);
+							if (j < 3) {
+								imu[i][j] = imu[i][j] * ascale;
 							} else {
-								imu[readnum][i] = imu[readnum][i] * gscale;
+								imu[i][j] = imu[i][j] * gscale;
 							}
 						}
 						// APPEND TO HISTORIES
-						for (int i = 0; i < 6; i++) {
-							nimu[readnum][i][off] = imu[readnum][i];
+						for (int j = 0; j < 6; j++) {
+							nimu[i][j][off] = imu[i][j];
+							ihist[i][j][hcount] = imu[i][j];
 						}
 					}
 				}
+				// touch stuff
 				thumbPressure = ((inBuffer[114] << 8) | (inBuffer[115] & 0xff));
 				if (thumbPressure > maxpress) {
 					maxpress = thumbPressure;
@@ -198,19 +225,186 @@ public class Side {
 			}
 			deltat = ttime / 1000000.0f;
 		}
-//		if (debug == 1) {
-//			for (int i = 0; i < 6; i++) {
-//				imu[2][i] = imu[3][i];
-//				for (int j = 0; j < nframes; j++) {
-//					nimu[2][i][j] = nimu[3][i][j];
-//				}
-//			}
-//		}
-		calcrpy();
+		sensorfusion();
+//		proc.println("MAX");
+//		proc.printArray(magmax[0]);
+//		proc.println("MIN");
+//		proc.printArray(magmin[0]);
+//		proc.println("bias");
+//		proc.printArray(magbias[0]);
+//		proc.println("scale");
+//		proc.printArray(magscale[0]);
+//		proc.println("avg rad");
+//		proc.printArray(avgrad[0]);
+//		proc.println("scale bias");
+//		proc.printArray(scalebias[0]);
 		updated = 1;
+		hcount++;
+		if (hcount == histlength) {
+			hcount = 0;
+		}
 	}
 
-	void Madgwick6(int i, float ax, float ay, float az, float gx, float gy, float gz) {
+	public void plot6Lines(int i, int n) {
+		int offset = n * 3;
+		float pheight = proc.height;
+		float pwidth = proc.width;
+		float yscale = (pheight / 2) / ypltscales[n];
+		float xscale = pwidth / (histlength + 5);
+		int c1 = proc.color(255, 0, 0);
+		int c2 = proc.color(0, 255, 0);
+		int c3 = proc.color(0, 0, 255);
+		int[] c = { c1, c2, c3 };
+		proc.pushMatrix();
+		proc.translate(50, 0, 0);
+		proc.translate(0, pheight / 2, 0);
+		proc.stroke(255);
+		proc.strokeWeight(1);
+		proc.line(0, 0, (pwidth * (histlength - 1) / (histlength + 4)), 0);
+		proc.line(0, -pheight / 2, 0, pheight / 2);
+		proc.line((pwidth * (histlength - 1) / (histlength + 4)), -pheight / 2,
+				(pwidth * (histlength - 1) / (histlength + 4)), pheight / 2);
+		proc.box(10);
+		int hptr = hcount;
+		int firsthalf = histlength - hptr - 1;
+		for (int j = offset; j < offset + 3; j++) {
+			proc.stroke(c[j - offset]);
+			for (int k = 0; k < firsthalf; k++) {
+				proc.line((k) * xscale, ihist[i][j][hptr + k] * yscale, (k + 1) * xscale,
+						ihist[i][j][hptr + k + 1] * yscale);
+			}
+			proc.line((histlength - hptr - 1) * xscale, ihist[i][j][histlength - 1] * yscale,
+					(histlength - hptr) * xscale, ihist[i][j][0] * yscale);
+			for (int k = 0; k < hptr; k++) {
+				proc.line((histlength - hptr + k) * xscale, ihist[i][j][k] * yscale,
+						(histlength - hptr + k + 1) * xscale, ihist[i][j][k + 1] * yscale);
+
+			}
+		}
+		proc.popMatrix();
+	}
+
+	public void plot6Points(int i, int n) {
+		int offset = n * 3;
+		float pheight = proc.height;
+		float pwidth = proc.width;
+		float yscale = (pheight / 2) / ypltscales[n];
+		float xscale = pwidth / (histlength + 5);
+		int c1 = proc.color(255, 0, 0);
+		int c2 = proc.color(0, 255, 0);
+		int c3 = proc.color(0, 0, 255);
+		int[] c = { c1, c2, c3 };
+		proc.pushMatrix();
+		proc.translate(50, 0, 0);
+		proc.translate(0, pheight / 2, 0);
+		proc.stroke(255);
+		proc.strokeWeight(1);
+		proc.line(0, 0, (pwidth * (histlength - 1) / (histlength + 4)), 0);
+		proc.line(0, -pheight / 2, 0, pheight / 2);
+		proc.line((pwidth * (histlength - 1) / (histlength + 4)), -pheight / 2,
+				(pwidth * (histlength - 1) / (histlength + 4)), pheight / 2);
+		proc.box(10);
+		int hptr = hcount;
+		int firsthalf = histlength - hptr - 1;
+		for (int j = offset; j < offset + 3; j++) {
+			proc.stroke(c[j - offset]);
+			for (int k = 0; k < firsthalf; k++) {
+				proc.point((k) * xscale, ihist[i][j][hptr + k] * yscale, 0);
+				proc.point((k + 1) * xscale, ihist[i][j][hptr + k + 1] * yscale, 0);
+			}
+			proc.point((histlength - hptr - 1) * xscale, ihist[i][j][histlength - 1] * yscale, 0);
+			proc.point((histlength - hptr) * xscale, ihist[i][j][0] * yscale, 0);
+			for (int k = 0; k < hptr; k++) {
+				proc.point((histlength - hptr + k) * xscale, ihist[i][j][k] * yscale, 0);
+				proc.point((histlength - hptr + k + 1) * xscale, ihist[i][j][k + 1] * yscale, 0);
+
+			}
+		}
+		proc.popMatrix();
+	}
+
+	public void plot9Lines(int i, int n) {
+//		proc.println(i);
+//		proc.printArray(magno[i]);
+//		proc.println();
+		int offset = n * 3;
+		float pheight = proc.height;
+		float pwidth = proc.width;
+		float yscale = (pheight / 2) / ypltscales[n];
+		float xscale = pwidth / (histlength + 5);
+		int c1 = proc.color(255, 0, 0);
+		int c2 = proc.color(0, 255, 0);
+		int c3 = proc.color(0, 0, 255);
+		int[] c = { c1, c2, c3 };
+		proc.pushMatrix();
+		proc.translate(50, 0, 0);
+		proc.translate(0, pheight / 2, 0);
+		proc.stroke(255);
+		proc.strokeWeight(1);
+		proc.line(0, 0, (pwidth * (histlength - 1) / (histlength + 4)), 0);
+		proc.line(0, -pheight / 2, 0, pheight / 2);
+		proc.line((pwidth * (histlength - 1) / (histlength + 4)), -pheight / 2,
+				(pwidth * (histlength - 1) / (histlength + 4)), pheight / 2);
+		proc.box(10);
+		int hptr = hcount;
+		int firsthalf = histlength - hptr - 1;
+		for (int j = offset; j < offset + 3; j++) {
+			proc.stroke(c[j - offset]);
+			for (int k = 0; k < firsthalf; k++) {
+				proc.line((k) * xscale, -mhist[i][j][hptr + k] * yscale, (k + 1) * xscale,
+						-mhist[i][j][hptr + k + 1] * yscale);
+			}
+			proc.line((histlength - hptr - 1) * xscale, -mhist[i][j][histlength - 1] * yscale,
+					(histlength - hptr) * xscale, -mhist[i][j][0] * yscale);
+			for (int k = 0; k < hptr; k++) {
+				proc.line((histlength - hptr + k) * xscale, -mhist[i][j][k] * yscale,
+						(histlength - hptr + k + 1) * xscale, -mhist[i][j][k + 1] * yscale);
+
+			}
+		}
+		proc.popMatrix();
+	}
+
+	public void plot9Points(int i, int n) {
+		int offset = n * 3;
+		float pheight = proc.height;
+		float pwidth = proc.width;
+		float yscale = (pheight / 2) / ypltscales[n];
+		float xscale = pwidth / (histlength + 5);
+		int c1 = proc.color(255, 0, 0);
+		int c2 = proc.color(0, 255, 0);
+		int c3 = proc.color(0, 0, 255);
+		int[] c = { c1, c2, c3 };
+		proc.pushMatrix();
+		proc.translate(50, 0, 0);
+		proc.translate(0, pheight / 2, 0);
+		proc.stroke(255);
+		proc.strokeWeight(5);
+		proc.line(0, 0, (pwidth * (histlength - 1) / (histlength + 4)), 0);
+		proc.line(0, -pheight / 2, 0, pheight / 2);
+		proc.line((pwidth * (histlength - 1) / (histlength + 4)), -pheight / 2,
+				(pwidth * (histlength - 1) / (histlength + 4)), pheight / 2);
+		proc.box(10);
+		int hptr = hcount;
+		int firsthalf = histlength - hptr - 1;
+		for (int j = offset; j < offset + 3; j++) {
+			proc.stroke(c[j - offset]);
+			for (int k = 0; k < firsthalf; k++) {
+				proc.point((k) * xscale, -mhist[i][j][hptr + k] * yscale, 0);
+				proc.point((k + 1) * xscale, -mhist[i][j][hptr + k + 1] * yscale, 0);
+			}
+			proc.point((histlength - hptr - 1) * xscale, -mhist[i][j][histlength - 1] * yscale, 0);
+			proc.point((histlength - hptr) * xscale, -mhist[i][j][0] * yscale, 0);
+			for (int k = 0; k < hptr; k++) {
+				proc.point((histlength - hptr + k) * xscale, -mhist[i][j][k] * yscale, 0);
+				proc.point((histlength - hptr + k + 1) * xscale, -mhist[i][j][k + 1] * yscale, 0);
+
+			}
+		}
+		proc.popMatrix();
+	}
+
+	public void Madgwick6(int i, float ax, float ay, float az, float gx, float gy, float gz) {
 		float q1 = q[i][0], q2 = q[i][1], q3 = q[i][2], q4 = q[i][3]; // short name local variable for readability
 		float norm; // vector norm
 		float f1, f2, f3; // objetive funcyion elements
@@ -233,7 +427,8 @@ public class Side {
 
 		// Normalise accelerometer measurement
 		norm = PApplet.sqrt(ax * ax + ay * ay + az * az);
-        if (norm == 0.0f) return; // handle NaN
+		if (norm == 0.0f)
+			return; // handle NaN
 		norm = 1.0f / norm;
 		ax *= norm;
 		ay *= norm;
@@ -408,29 +603,7 @@ public class Side {
 //		PApplet.println(q[i][0], q[i][1], q[i][2], q[i][3] );
 	}
 
-	public void calcrpy() {
-		for (int i = 0; i < 3; i++) {
-			for (int j = 0; j < 9; j++) {
-				magavg[i][j] = 0;
-				for (int k = 0; k < nframes; k++) {
-					magavg[i][j] += nmag[i][j][k];
-				}
-				magavg[i][j] /= nframes;
-//				if (i < 6) {
-//					imuavg[9][i] = magavg[i];
-//				}
-			}
-		}
-		for (int i = 0; i < 5; i++) {
-			for (int j = 0; j < 6; j++) {
-				imuavg[i][j] = 0;
-				for (int n = 0; n < nframes; n++) {
-					imuavg[i][j] += nimu[i][j][n];
-				}
-				imuavg[i][j] /= nframes;
-			}
-		}
-
+	public void sensorfusion() {
 		for (int i = 0; i < 3; i++) {
 			Madgwick9(i, magno[i][0], magno[i][1], magno[i][2], magno[i][3] * PI / 180.f, magno[i][4] * PI / 180.f,
 					magno[i][5] * PI / 180.f, magno[i][7], magno[i][6], magno[i][8]);
@@ -446,8 +619,8 @@ public class Side {
 		}
 
 		for (int i = 3; i < 8; i++) {
-			Madgwick6(i, imu[i-3][0], imu[i-3][1], imu[i-3][2], imu[i-3][3] * PI / 180.f, imu[i-3][4] * PI / 180.f,
-					imu[i-3][5] * PI / 180.f);
+			Madgwick6(i, imu[i - 3][0], imu[i - 3][1], imu[i - 3][2], imu[i - 3][3] * PI / 180.f,
+					imu[i - 3][4] * PI / 180.f, imu[i - 3][5] * PI / 180.f);
 			yaw[i] = PApplet.atan2(2.0f * (q[i][1] * q[i][2] + q[i][0] * q[i][3]),
 					q[i][0] * q[i][0] + q[i][1] * q[i][1] - q[i][2] * q[i][2] - q[i][3] * q[i][3]);
 			pitch[i] = -PApplet.asin(2.0f * (q[i][1] * q[i][3] - q[i][0] * q[i][2]));
@@ -459,20 +632,41 @@ public class Side {
 			roll[i] *= 180.0f / PI;
 //			proc.println(yaw[i], pitch[i], roll[i]);
 		}
-//		for (int i = 0; i < 3; i++) {
-//			roll[i] = PApplet.atan2(magavg[i][1], magavg[i][2]) * 180 / PI;
-//			pitch[i] = PApplet.atan2(-magavg[i][0], PApplet.sqrt((magavg[i][1] * magavg[i][1]) + (magavg[i][2] * magavg[i][2]))) * 180 / PI;
-//			yaw[i] = -PApplet.atan2(magavg[i][6], magavg[i][7]) * 180 / PI + zoffset;
-//		}
-//
-//		for (int i = 0; i < 5; i++) {
-//			roll[i + 3] = -PApplet.atan2(imuavg[i][0], imuavg[i][2]) * 180 / PI;
-//			pitch[i + 3] = PApplet.atan2(-imuavg[i][1],
-//					PApplet.sqrt((imuavg[i][0] * imuavg[i][0]) + (imuavg[i][2] * imuavg[i][2]))) * 180 / PI;
-//			yaw[i + 3] = PApplet.atan2(PApplet.sqrt((imuavg[i][1] * imuavg[i][1]) + (imuavg[i][0] * imuavg[i][0])),
-//					imuavg[i][2]);
-//		}
-
 	}
-
 }
+
+//OLD CALCULATION FUNCTIONS
+//for (int i = 0; i < 3; i++) {
+//for (int j = 0; j < 9; j++) {
+//	magavg[i][j] = 0;
+//	for (int k = 0; k < nframes; k++) {
+//		magavg[i][j] += nmag[i][j][k];
+//	}
+//	magavg[i][j] /= nframes;
+////	if (i < 6) {
+////		imuavg[9][i] = magavg[i];
+////	}
+//}
+//}
+//for (int i = 0; i < 5; i++) {
+//for (int j = 0; j < 6; j++) {
+//	imuavg[i][j] = 0;
+//	for (int n = 0; n < nframes; n++) {
+//		imuavg[i][j] += nimu[i][j][n];
+//	}
+//	imuavg[i][j] /= nframes;
+//}
+//}
+//for (int i = 0; i < 3; i++) {
+//roll[i] = PApplet.atan2(magavg[i][1], magavg[i][2]) * 180 / PI;
+//pitch[i] = PApplet.atan2(-magavg[i][0], PApplet.sqrt((magavg[i][1] * magavg[i][1]) + (magavg[i][2] * magavg[i][2]))) * 180 / PI;
+//yaw[i] = -PApplet.atan2(magavg[i][6], magavg[i][7]) * 180 / PI + zoffset;
+//}
+//
+//for (int i = 0; i < 5; i++) {
+//roll[i + 3] = -PApplet.atan2(imuavg[i][0], imuavg[i][2]) * 180 / PI;
+//pitch[i + 3] = PApplet.atan2(-imuavg[i][1],
+//		PApplet.sqrt((imuavg[i][0] * imuavg[i][0]) + (imuavg[i][2] * imuavg[i][2]))) * 180 / PI;
+//yaw[i + 3] = PApplet.atan2(PApplet.sqrt((imuavg[i][1] * imuavg[i][1]) + (imuavg[i][0] * imuavg[i][0])),
+//		imuavg[i][2]);
+//}
