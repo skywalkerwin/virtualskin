@@ -58,7 +58,7 @@ public class Side {
 
 	// sensor fusion stuff
 	float deltat = 0f;
-	float GyroMeasError = PI * (80.0f / 180.0f); // gyroscope measurement error in rads/s (start at 40 deg/s)
+	float GyroMeasError = PI * (40.0f / 180.0f); // gyroscope measurement error in rads/s (start at 40 deg/s)
 	float GyroMeasDrift = PI * (0.0f / 180.0f); // gyroscope measurement drift in rad/s/s (start at 0.0 deg/s/s)
 	float beta = PApplet.sqrt(3.0f / 4.0f) * GyroMeasError; // compute beta
 	float zeta = PApplet.sqrt(3.0f / 4.0f) * GyroMeasDrift;
@@ -69,6 +69,9 @@ public class Side {
 	float[] pitch = new float[11];// { { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 } };
 	float[] yaw = new float[11];// { { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 } };
 
+	float mx=0f;
+	float my=0f;
+	float mz=0f;
 //	float[][] magavg = new float[3][9];
 //	float[][] imuavg = new float[10][6];
 //	double gyro[][] = new double[10][3];
@@ -223,18 +226,18 @@ public class Side {
 			deltat = ttime / 1000000.0f;
 		}
 		sensorfusion();
-		proc.println("MAX");
-		proc.printArray(magmax[0]);
-		proc.println("MIN");
-		proc.printArray(magmin[0]);
-		proc.println("bias");
-		proc.printArray(magbias[0]);
-		proc.println("scale");
-		proc.printArray(magscale[0]);
-		proc.println("avg rad");
-		proc.printArray(avgrad[0]);
-		proc.println("scale bias");
-		proc.printArray(scalebias[0]);
+//		proc.println("MAX");
+//		proc.printArray(magmax[0]);
+//		proc.println("MIN");
+//		proc.printArray(magmin[0]);
+//		proc.println("bias");
+//		proc.printArray(magbias[0]);
+//		proc.println("scale");
+//		proc.printArray(magscale[0]);
+//		proc.println("avg rad");
+//		proc.printArray(avgrad[0]);
+//		proc.println("scale bias");
+//		proc.printArray(scalebias[0]);
 		updated = 1;
 		hcount++;
 		if (hcount == histlength) {
@@ -611,7 +614,7 @@ public class Side {
 					q[i][0] * q[i][0] - q[i][1] * q[i][1] - q[i][2] * q[i][2] + q[i][3] * q[i][3]);
 			pitch[i] *= 180.0f / PI;
 			yaw[i] *= 180.0f / PI;
-//			yaw[i] -= 8; // Declination at Danville, California is 13 degrees 48 minutes and 47 seconds
+			yaw[i] -= 8; // Declination at Danville, California is 13 degrees 48 minutes and 47 seconds
 			roll[i] *= 180.0f / PI;
 		}
 
