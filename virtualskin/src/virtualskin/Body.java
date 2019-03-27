@@ -191,9 +191,10 @@ public class Body {
 
 	public void arm(Side side, int direction) {
 		int d = direction;
-		int ulen = 300;
+		int ulen = 250;
 		int llen = 200;
 		proc.pushMatrix();
+		proc.strokeWeight(1);
 		proc.translate(d * 200, 0, -200);
 		if (drawbool == 1) {
 			proc.fill(255);
@@ -203,9 +204,9 @@ public class Body {
 		proc.rotateZ(side.yaw[0] * PI / 180);
 		proc.rotateX(side.pitch[0] * PI / 180);
 		proc.rotateY(-side.roll[0] * PI / 180);
-		proc.rotateX(PI / 2);
-		proc.rotateZ(-PI / 2);
-		proc.translate(d * 0, 0, -150);
+//		proc.rotateX(PI / 2);
+//		proc.rotateZ(-PI / 2);
+		proc.translate(d * 0, ulen/2, 0);
 		if (xyz == 1) {
 			xyzlines();
 		}
@@ -214,16 +215,14 @@ public class Body {
 			proc.stroke(0);
 			proc.fill(0, 255, 0);
 //			proc.fill(255);
-			proc.box(50, 50, -300);
+			proc.box(50, ulen, 50);
 		}
-		proc.translate(0, 0, -170);
+		proc.translate(0, ulen/2, 0);
 		if (drawbool == 1) {
 			proc.fill(255);
 			proc.stroke(0);
 			proc.sphere(20);
 		}
-		proc.rotateZ(PI / 2);
-		proc.rotateX(-PI / 2);
 		proc.rotateY(side.roll[0] * PI / 180);
 		proc.rotateX(-side.pitch[0] * PI / 180);
 		proc.rotateZ(-side.yaw[0] * PI / 180);
@@ -231,9 +230,7 @@ public class Body {
 		proc.rotateZ(side.yaw[1] * PI / 180);
 		proc.rotateX(side.pitch[1] * PI / 180);
 		proc.rotateY(-side.roll[1] * PI / 180);
-		proc.rotateX(PI / 2);
-		proc.rotateZ(-PI / 2);
-		proc.translate(00, 0, -140);
+		proc.translate(0, llen/2, 0);
 		if (xyz == 1) {
 			xyzlines();
 		}
@@ -242,9 +239,9 @@ public class Body {
 			proc.stroke(0);
 			proc.fill(0, 255, 0);
 //			proc.fill(255);
-			proc.box(40, 40, -250);
+			proc.box(40, llen, 40);
 		}
-		proc.translate(0, 0, -140);
+		proc.translate(0, llen/2, 0);
 		if (drawbool == 1) {
 			proc.fill(255);
 			proc.stroke(0);
@@ -258,8 +255,6 @@ public class Body {
 	public void hands(Side side, int direction) {
 		int d = direction;
 		int len = 100;
-		proc.rotateZ(PI / 2);
-		proc.rotateX(-PI / 2);
 		proc.rotateY(side.roll[1] * PI / 180);
 		proc.rotateX(-side.pitch[1] * PI / 180);
 		proc.rotateZ(-side.yaw[1] * PI / 180);
@@ -268,9 +263,7 @@ public class Body {
 		proc.rotateX(side.pitch[2] * PI / 180);
 		proc.rotateY(-side.roll[2] * PI / 180);
 
-		proc.rotateX(PI / 2);
-		proc.rotateZ(-PI / 2);
-		proc.translate(0, 0, -len);
+		proc.translate(0, len/2, 0);
 		int k = d;
 		if (k == -1) {
 			k = 0;
@@ -287,7 +280,7 @@ public class Body {
 			proc.stroke(0);
 			proc.fill(0, 255, 0);
 //			proc.fill(255);
-			proc.box(30, 30, -90);
+			proc.box(30, len, 30);
 		}
 	}
 

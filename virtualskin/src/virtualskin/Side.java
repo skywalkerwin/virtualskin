@@ -58,8 +58,8 @@ public class Side {
 
 	// sensor fusion stuff
 	float deltat = 0f;
-	float GyroMeasError = PI * (40.0f / 180.0f); // gyroscope measurement error in rads/s (start at 40 deg/s)
-	float GyroMeasDrift = PI * (0.0f / 180.0f); // gyroscope measurement drift in rad/s/s (start at 0.0 deg/s/s)
+	float GyroMeasError = PI * (50.0f / 180.0f); // gyroscope measurement error in rads/s (start at 40 deg/s)
+	float GyroMeasDrift = PI * (5.0f / 180.0f); // gyroscope measurement drift in rad/s/s (start at 0.0 deg/s/s)
 	float beta = PApplet.sqrt(3.0f / 4.0f) * GyroMeasError; // compute beta
 	float zeta = PApplet.sqrt(3.0f / 4.0f) * GyroMeasDrift;
 	float[][] q = new float[8][4];
