@@ -8,20 +8,22 @@ public class Body {
 	PApplet proc;
 	Side left;
 	Side right;
-//	float Now = 0f;
-//	float deltat = 0f;
-//	float lastUpdate = 0f;
-//	float sum = 0f;
-//	int sumCount = 0;
 	static float PI = PConstants.PI;
-
-	float roty = 0f;
-	int xyz = 0;
+	int xyz = 1;
+	int curLine = 0;
+	int maxLines = 600;
+	float[][][] linep = new float[2][maxLines][4];
 
 	Body(PApplet p, Serial leftport, Serial rightport) {
 		proc = p;
 		left = new Side(proc, this, leftport, 0);
 		right = new Side(proc, this, rightport, 0);
+		for (int i = 0; i < maxLines; i++) {
+			for (int j = 0; j < 4; j++) {
+				linep[0][i][j] = 0;
+				linep[1][i][j] = 0;
+			}
+		}
 	}
 
 	public void verifyUpdate() {
@@ -30,23 +32,11 @@ public class Body {
 				PApplet.println("WAITING...");
 			}
 		}
-//		Now = System.nanoTime();
-//		deltat = ((Now - lastUpdate) / 1000000000.0f); // set integration time by time elapsed since last filter update
-//		lastUpdate = Now;
-//		sum += deltat; // sum for averaging filter update rate
-//		sumCount++;
-//		PApplet.println(deltat);
 	}
 
 	public void printSendTimes() {
 		PApplet.println(left.ttime);
 		PApplet.println(right.ttime);
-		PApplet.println();
-	}
-
-	public void printTRPY() {
-		PApplet.println(left.roll[10], left.pitch[10], left.yaw[10]);
-		PApplet.println(right.roll[10], right.pitch[10], right.yaw[10]);
 		PApplet.println();
 	}
 
@@ -101,35 +91,84 @@ public class Body {
 
 	public void drawBody() {
 		proc.pushMatrix();
+
 //		plots();
+
+		proc.pushMatrix();
+		proc.translate(1 * proc.width / 6, 0, 0);
+		testimus(left);
+		proc.popMatrix();
 		
-//		proc.pushMatrix();
-//		proc.translate(1 * proc.width / 6, 0, 0);
-//		testimus(left);
-//		proc.popMatrix();
-//		
-//		proc.pushMatrix();
-//		proc.translate(5 * proc.width / 6, 0, 0);
-//		testimus(right);
-//		proc.popMatrix();
-		
+		proc.pushMatrix();
+		proc.translate(5 * proc.width / 6, 0, 0);
+		testimus(right);
+		proc.popMatrix();
+
+		// DRAW BODY STUFF
 		proc.pushMatrix();
 		proc.translate(proc.width / 2, proc.height / 2, 0);
 		proc.rotateX(-PI / 2);
-		proc.scale(.8f);
+//		proc.scale(.5f);
 //		torso();
 //		head();
 		arm(left, -1);
 		arm(right, 1);
 //		legs();
 		proc.popMatrix();
-		
-		proc.pushMatrix();
-		proc.stroke(255);
-		proc.strokeWeight(5);
-		proc.line(left.mx, left.my,left.mz, right.mx, right.my, right.mz);
-		proc.popMatrix();
-		
+
+//		proc.pushMatrix();
+//		proc.strokeWeight(1);
+////		proc.beginShape(proc.TRIANGLE_FAN);
+////		proc.beginShape();
+////		proc.text(curLine, 100, 100);
+//		proc.noFill();
+//		for (int i = 255; i > curLine; i--) {
+//			proc.stroke(i - curLine);
+//			proc.strokeWeight(1);
+//			proc.line(linep[0][i][0], linep[0][i][1], linep[0][i][2], linep[1][i][0], linep[1][i][1], linep[1][i][2]);
+////			proc.stroke(0,255,0);
+////			proc.strokeWeight(5);
+////			proc.point((linep[0][i][0]+linep[1][i][0])/2, (linep[0][i][1]+linep[1][i][1])/2, (linep[0][i][2]+linep[1][i][2])/2);
+////			proc.vertex(linep[0][i][0], linep[0][i][1], linep[0][i][2]);
+////			proc.vertex(linep[1][i][0], linep[1][i][1], linep[1][i][2]);
+//}
+//		for (int i = curLine; i >= 0; i--) {
+//			proc.stroke(255 - (curLine - i));
+//			proc.strokeWeight(1);
+//			proc.line(linep[0][i][0], linep[0][i][1], linep[0][i][2], linep[1][i][0], linep[1][i][1], linep[1][i][2]);
+////			proc.stroke(0,255,0);
+////			proc.strokeWeight(5);
+////			proc.point((linep[0][i][0]+linep[1][i][0])/2, (linep[0][i][1]+linep[1][i][1])/2, (linep[0][i][2]+linep[1][i][2])/2);
+////			proc.vertex(linep[0][i][0], linep[0][i][1], linep[0][i][2]);
+////			proc.vertex(linep[1][i][0], linep[1][i][1], linep[1][i][2]);
+//		}
+////		proc.endShape();
+//		proc.popMatrix();
+
+//		proc.pushMatrix();
+//		proc.strokeWeight(1);
+////		proc.beginShape(proc.TRIANGLE_FAN);
+////		proc.beginShape();
+//		proc.noFill();
+////		proc.stroke(255);
+//		for (int i = maxLines - 1; i > curLine; i--) {
+//			proc.stroke((linep[0][i][3]+linep[1][i][3])/2*255);
+//			proc.strokeWeight(1);
+//			proc.line(linep[0][i][0], linep[0][i][1], linep[0][i][2], linep[1][i][0], linep[1][i][1], linep[1][i][2]);
+//
+//		}
+//		for (int i = curLine; i >= 0; i--) {
+//			proc.stroke((linep[0][i][3]+linep[1][i][3])/2*255);			
+//			proc.strokeWeight(1);
+//			proc.line(linep[0][i][0], linep[0][i][1], linep[0][i][2], linep[1][i][0], linep[1][i][1], linep[1][i][2]);
+//		}
+////		proc.endShape();
+//		proc.popMatrix();
+
+		curLine++;
+		if (curLine == maxLines) {
+			curLine = 0;
+		}
 		proc.popMatrix();
 	}
 
@@ -148,13 +187,19 @@ public class Body {
 		proc.popMatrix();
 	}
 
+	int drawbool = 1;
+
 	public void arm(Side side, int direction) {
 		int d = direction;
+		int ulen = 300;
+		int llen = 200;
 		proc.pushMatrix();
 		proc.translate(d * 200, 0, -200);
-		proc.fill(255);
-		proc.stroke(0);
-		proc.sphere(50);
+		if (drawbool == 1) {
+			proc.fill(255);
+			proc.stroke(0);
+			proc.sphere(30);
+		}
 		proc.rotateZ(side.yaw[0] * PI / 180);
 		proc.rotateX(side.pitch[0] * PI / 180);
 		proc.rotateY(-side.roll[0] * PI / 180);
@@ -164,16 +209,19 @@ public class Body {
 		if (xyz == 1) {
 			xyzlines();
 		}
-		proc.strokeWeight(4);
-		proc.stroke(0);
-		proc.fill(0, 255, 0);
-		proc.fill(255);
-		proc.box(100, 100, -300);
-
+		if (drawbool == 1) {
+			proc.strokeWeight(4);
+			proc.stroke(0);
+			proc.fill(0, 255, 0);
+//			proc.fill(255);
+			proc.box(50, 50, -300);
+		}
 		proc.translate(0, 0, -170);
-		proc.fill(255);
-		proc.stroke(0);
-		proc.sphere(40);
+		if (drawbool == 1) {
+			proc.fill(255);
+			proc.stroke(0);
+			proc.sphere(20);
+		}
 		proc.rotateZ(PI / 2);
 		proc.rotateX(-PI / 2);
 		proc.rotateY(side.roll[0] * PI / 180);
@@ -189,15 +237,19 @@ public class Body {
 		if (xyz == 1) {
 			xyzlines();
 		}
-		proc.strokeWeight(3);
-		proc.stroke(0);
-		proc.fill(0, 255, 0);
-		proc.fill(255);
-		proc.box(80, 80, -250);
+		if (drawbool == 1) {
+			proc.strokeWeight(3);
+			proc.stroke(0);
+			proc.fill(0, 255, 0);
+//			proc.fill(255);
+			proc.box(40, 40, -250);
+		}
 		proc.translate(0, 0, -140);
-		proc.fill(255);
-		proc.stroke(0);
-		proc.sphere(30);
+		if (drawbool == 1) {
+			proc.fill(255);
+			proc.stroke(0);
+			proc.sphere(20);
+		}
 		hands(side, d);
 		proc.popMatrix();
 
@@ -205,6 +257,7 @@ public class Body {
 
 	public void hands(Side side, int direction) {
 		int d = direction;
+		int len = 100;
 		proc.rotateZ(PI / 2);
 		proc.rotateX(-PI / 2);
 		proc.rotateY(side.roll[1] * PI / 180);
@@ -217,20 +270,25 @@ public class Body {
 
 		proc.rotateX(PI / 2);
 		proc.rotateZ(-PI / 2);
-		proc.translate(0, 0, -60);
-
-		side.mx = proc.modelX(0, 0, 0);
-		side.my = proc.modelY(0, 0, 0);
-		side.mz = proc.modelZ(0, 0, 0);
+		proc.translate(0, 0, -len);
+		int k = d;
+		if (k == -1) {
+			k = 0;
+		}
+		linep[k][curLine][0] = proc.modelX(0, 0, 0);
+		linep[k][curLine][1] = proc.modelY(0, 0, 0);
+		linep[k][curLine][2] = proc.modelZ(0, 0, 0);
+		linep[k][curLine][3] = (float)side.normpress;
 		if (xyz == 1) {
 			xyzlines();
 		}
-		proc.strokeWeight(2);
-
-		proc.stroke(0);
-		proc.fill(0, 255, 0);
-		proc.fill(255);
-		proc.box(70, 70, -90);
+		if (drawbool == 1) {
+			proc.strokeWeight(2);
+			proc.stroke(0);
+			proc.fill(0, 255, 0);
+//			proc.fill(255);
+			proc.box(30, 30, -90);
+		}
 	}
 
 	public void torso() {
@@ -244,7 +302,6 @@ public class Body {
 		proc.fill(255);
 //		proc.noStroke();
 		proc.stroke(0);
-		;
 		proc.sphere(75);
 		proc.popMatrix();
 	}
