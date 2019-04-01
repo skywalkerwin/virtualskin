@@ -2,9 +2,11 @@ package virtualskin;
 
 import processing.core.PApplet;
 import processing.serial.*;
+import ddf.minim.*;
 
 public class processing extends PApplet {
-
+	Minim minim;
+	AudioInput in;
 	String leftcom = "COM4";
 	String rightcom = "COM5";
 //	String leftcom = "COM11";
@@ -44,6 +46,10 @@ public class processing extends PApplet {
 		frameRate(120);
 		background(0);
 		ellipseMode(RADIUS);
+		  minim = new Minim(this);
+		  in = minim.getLineIn();
+
+
 
 		rightPort = new Serial(this, rightcom, 115200);
 		rightPort.clear();
@@ -103,8 +109,21 @@ public class processing extends PApplet {
 		textSize(30);
 		text(frameRate, 20, 20);
 		counter++;
+//		body.drawBody();
+		
+		  stroke(255);
+		  in.enableMonitoring();
+//		  println(in.bufferSize());
+		  // draw the waveforms so we can see what we are monitoring
+		  for(int i = 0; i < in.bufferSize() - 1; i++)
+		  {
+		    line( i, 50 + in.left.get(i)*50, i+1, 50 + in.left.get(i+1)*50 );
+		    line( i, 150 + in.right.get(i)*50, i+1, 150 + in.right.get(i+1)*50 );
+		  }
+		  
+//		  String monitoringState = in.isMonitoring() ? "enabled" : "disabled";
+//		  text( "Input monitoring is currently " + monitoringState + ".", 5, 15 );
 		body.drawBody();
-//		body.plots();
 	}
 
 	public void mousePressed() {
