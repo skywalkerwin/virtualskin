@@ -3,19 +3,28 @@ package virtualskin;
 import processing.core.PApplet;
 import processing.core.PConstants;
 import processing.serial.Serial;
+import ddf.minim.*;
+import ddf.minim.Minim;
+import ddf.minim.AudioPlayer;
+import ddf.minim.analysis.*;
 
 public class Body {
 	PApplet proc;
 	Side left;
 	Side right;
 	static float PI = PConstants.PI;
-	int xyz = 1;
+	int xyz = 0;
 	int curLine = 0;
 	int maxLines = 100;
 	float[][][] handpoint = new float[2][maxLines][4];
 	float[][][] elbowpoint = new float[2][maxLines][4];
+	Minim minim;
+	AudioInput in;
+	AudioPlayer song;
+	FFT fftLin;
+	FFT fftLog;
 
-	Body(PApplet p, Serial leftport, Serial rightport) {
+	Body(PApplet p, Serial leftport, Serial rightport, Minim m, AudioPlayer s) {
 		proc = p;
 		left = new Side(proc, this, leftport, 0);
 		right = new Side(proc, this, rightport, 0);
@@ -27,6 +36,21 @@ public class Body {
 				elbowpoint[1][i][j] = 0;
 			}
 		}
+
+		minim = m;
+		song = s;
+		in = minim.getLineIn();
+		in.enableMonitoring();
+		song.loop();
+		fftLin = new FFT(song.bufferSize(), 88200);
+		fftLin.linAverages(30);
+		fftLog = new FFT(song.bufferSize(), song.sampleRate());
+		fftLog.logAverages(22, 12);
+		proc.rectMode(proc.CORNERS);
+		proc.strokeCap(proc.ROUND);
+		proc.strokeJoin(proc.ROUND);
+		proc.ellipseMode(proc.RADIUS);
+
 	}
 
 	public void verifyUpdate() {
@@ -118,33 +142,54 @@ public class Body {
 		arm(right, 1);
 //		legs();
 		proc.popMatrix();
+		voice();
+		curLine++;
+		if (curLine == maxLines) {
+			curLine = 0;
+		}
+		proc.popMatrix();
+	}
 
+	public void voice() {
 		proc.pushMatrix();
 		proc.strokeWeight(2);
-		proc.stroke(255,255,0);
+		proc.stroke(255, 255, 0);
+//		proc.stroke(255);
 		float xd = (handpoint[1][curLine][0] - handpoint[0][curLine][0]);
 		float yd = (handpoint[1][curLine][1] - handpoint[0][curLine][1]);
 		float zd = (handpoint[1][curLine][2] - handpoint[0][curLine][2]);
-		float hdistance = proc.dist(handpoint[0][curLine][0], handpoint[0][curLine][1], handpoint[0][curLine][2],
+
+		float mxd = (handpoint[1][curLine][0] + handpoint[0][curLine][0]) / 2;
+		float myd = (handpoint[1][curLine][1] + handpoint[0][curLine][1]) / 2;
+		float mzd = (handpoint[1][curLine][2] + handpoint[0][curLine][2]) / 2;
+		float hdis = proc.dist(handpoint[0][curLine][0], handpoint[0][curLine][1], handpoint[0][curLine][2],
 				handpoint[1][curLine][0], handpoint[1][curLine][1], handpoint[1][curLine][2]);
-		proc.println(hdistance);
+		proc.println(hdis);
 		proc.println("X:", xd);
 		proc.println("Y:", yd);
 		proc.println("Z:", zd);
 
-		proc.line(handpoint[0][curLine][0], handpoint[0][curLine][1], handpoint[0][curLine][2],
-				handpoint[0][curLine][0]+xd, handpoint[0][curLine][1], handpoint[0][curLine][2]);
-		proc.line(handpoint[0][curLine][0], handpoint[0][curLine][1], handpoint[0][curLine][2],
-				handpoint[0][curLine][0], handpoint[0][curLine][1]+yd, handpoint[0][curLine][2]);
-		proc.line(handpoint[0][curLine][0], handpoint[0][curLine][1], handpoint[0][curLine][2],
-				handpoint[0][curLine][0], handpoint[0][curLine][1], handpoint[0][curLine][2]+zd);
-		
-		proc.line(handpoint[1][curLine][0], handpoint[1][curLine][1], handpoint[1][curLine][2],
-				handpoint[1][curLine][0]-xd, handpoint[1][curLine][1], handpoint[1][curLine][2]);
-		proc.line(handpoint[1][curLine][0], handpoint[1][curLine][1], handpoint[1][curLine][2],
-				handpoint[1][curLine][0], handpoint[1][curLine][1]-yd, handpoint[1][curLine][2]);
-		proc.line(handpoint[1][curLine][0], handpoint[1][curLine][1], handpoint[1][curLine][2],
-				handpoint[1][curLine][0], handpoint[1][curLine][1], handpoint[1][curLine][2]-zd);
+		proc.pushMatrix();
+		proc.translate(handpoint[0][curLine][0], handpoint[0][curLine][1], handpoint[0][curLine][2]);
+		float xzd = PApplet.sqrt((xd * xd + zd * zd));
+		float yrot = PApplet.asin(zd / xzd);
+		float zrot = PApplet.asin(yd / hdis);
+		proc.rotateY(-yrot);
+		proc.rotateZ(zrot);
+		for (int i = 0; i < in.bufferSize() - 1; i++) {
+			proc.line((i * (hdis / 1024)), in.left.get(i) * 100, ((i + 1) * (hdis / 1024)), in.left.get(i + 1) * 100);
+		}
+		proc.popMatrix();
+		proc.popMatrix();
+	}
+
+	public void armlines() {
+		proc.pushMatrix();
+//		proc.translate(mxd, myd, mzd);
+//		proc.noFill();
+//		proc.box(xd, yd, zd);
+//		proc.popMatrix();
+
 //		for (int i = maxLines - 1; i > curLine; i--) {
 ////			proc.stroke(i - curLine);
 ////			proc.strokeWeight(1);
@@ -223,12 +268,6 @@ public class Body {
 //					handpoint[0][i][2], handpoint[1][i][0], handpoint[1][i][1], handpoint[1][i][2]);
 //		}
 		proc.popMatrix();
-
-		curLine++;
-		if (curLine == maxLines) {
-			curLine = 0;
-		}
-		proc.popMatrix();
 	}
 
 	public void head() {
@@ -246,7 +285,8 @@ public class Body {
 		proc.popMatrix();
 	}
 
-	int drawbool = 1;
+	int drawbool = 0;
+//	int drawbool = 1;
 
 	public void arm(Side side, int direction) {
 		int d = direction;

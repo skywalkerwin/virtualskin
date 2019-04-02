@@ -3,10 +3,10 @@ package virtualskin;
 import processing.core.PApplet;
 import processing.serial.*;
 import ddf.minim.*;
+import ddf.minim.analysis.*;
+
 
 public class processing extends PApplet {
-	Minim minim;
-	AudioInput in;
 	String leftcom = "COM4";
 	String rightcom = "COM5";
 //	String leftcom = "COM11";
@@ -15,6 +15,12 @@ public class processing extends PApplet {
 	Serial leftPort;
 
 	Body body;
+	Minim minim;
+	AudioPlayer song;
+	String songfile = "C:/music/ghostvoices.mp3";
+//	String songfile = "C:\\music\\ghostvoices.mp3";
+//	String songfile = "/virtualskin/music/ghostvoices.mp3";
+//	AudioMetaData meta;
 //	static double ascale0 = .000061;
 //	static double ascale1 = .000122;
 //	static double ascale2 = .000244;
@@ -46,11 +52,6 @@ public class processing extends PApplet {
 		frameRate(120);
 		background(0);
 		ellipseMode(RADIUS);
-		  minim = new Minim(this);
-		  in = minim.getLineIn();
-
-
-
 		rightPort = new Serial(this, rightcom, 115200);
 		rightPort.clear();
 		rightPort.buffer(122);
@@ -59,7 +60,9 @@ public class processing extends PApplet {
 		leftPort.buffer(122);
 		delay(1000);
 		sphereDetail(10);
-		body = new Body(this, leftPort, rightPort);
+		minim = new Minim(this);
+		song = minim.loadFile(songfile, 2048);
+		body = new Body(this, leftPort, rightPort, minim, song);
 	}
 
 	int order = 0;
@@ -109,20 +112,6 @@ public class processing extends PApplet {
 		textSize(30);
 		text(frameRate, 20, 20);
 		counter++;
-//		body.drawBody();
-		
-		  stroke(255);
-		  in.enableMonitoring();
-//		  println(in.bufferSize());
-		  // draw the waveforms so we can see what we are monitoring
-		  for(int i = 0; i < in.bufferSize() - 1; i++)
-		  {
-		    line( i, 50 + in.left.get(i)*50, i+1, 50 + in.left.get(i+1)*50 );
-		    line( i, 150 + in.right.get(i)*50, i+1, 150 + in.right.get(i+1)*50 );
-		  }
-		  
-//		  String monitoringState = in.isMonitoring() ? "enabled" : "disabled";
-//		  text( "Input monitoring is currently " + monitoringState + ".", 5, 15 );
 		body.drawBody();
 	}
 
