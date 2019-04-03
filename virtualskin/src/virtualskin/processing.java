@@ -17,6 +17,7 @@ public class processing extends PApplet {
 	Body body;
 	Minim minim;
 	AudioPlayer song;
+	AudioOutput out;
 	String songfile = "C:/music/ghostvoices.mp3";
 //	String songfile = "C:\\music\\ghostvoices.mp3";
 //	String songfile = "/virtualskin/music/ghostvoices.mp3";
@@ -62,7 +63,7 @@ public class processing extends PApplet {
 		sphereDetail(10);
 		minim = new Minim(this);
 		song = minim.loadFile(songfile, 2048);
-		body = new Body(this, leftPort, rightPort, minim, song);
+		body = new Body(this, leftPort, rightPort, minim, out, song);
 	}
 
 	int order = 0;
