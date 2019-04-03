@@ -2,9 +2,11 @@ package virtualskin;
 
 import processing.core.PApplet;
 import processing.serial.*;
+import ddf.minim.*;
+import ddf.minim.analysis.*;
+
 
 public class processing extends PApplet {
-
 	String leftcom = "COM4";
 	String rightcom = "COM5";
 //	String leftcom = "COM11";
@@ -13,6 +15,13 @@ public class processing extends PApplet {
 	Serial leftPort;
 
 	Body body;
+	Minim minim;
+	AudioPlayer song;
+	AudioOutput out;
+	String songfile = "C:/music/ghostvoices.mp3";
+//	String songfile = "C:\\music\\ghostvoices.mp3";
+//	String songfile = "/virtualskin/music/ghostvoices.mp3";
+//	AudioMetaData meta;
 //	static double ascale0 = .000061;
 //	static double ascale1 = .000122;
 //	static double ascale2 = .000244;
@@ -44,7 +53,6 @@ public class processing extends PApplet {
 		frameRate(120);
 		background(0);
 		ellipseMode(RADIUS);
-
 		rightPort = new Serial(this, rightcom, 115200);
 		rightPort.clear();
 		rightPort.buffer(122);
@@ -53,7 +61,9 @@ public class processing extends PApplet {
 		leftPort.buffer(122);
 		delay(1000);
 		sphereDetail(10);
-		body = new Body(this, leftPort, rightPort);
+		minim = new Minim(this);
+		song = minim.loadFile(songfile, 2048);
+		body = new Body(this, leftPort, rightPort, minim, out, song);
 	}
 
 	int order = 0;
@@ -104,7 +114,6 @@ public class processing extends PApplet {
 		text(frameRate, 20, 20);
 		counter++;
 		body.drawBody();
-//		body.plots();
 	}
 
 	public void mousePressed() {

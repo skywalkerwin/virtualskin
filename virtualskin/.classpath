@@ -21,5 +21,11 @@
 	<classpathentry kind="lib" path="C:/processing-3.4/core/library/jogl-all-natives-macosx-universal.jar"/>
 	<classpathentry kind="lib" path="C:/processing-3.4/core/library/jogl-all-natives-windows-amd64.jar"/>
 	<classpathentry kind="lib" path="C:/processing-3.4/core/library/jogl-all-natives-windows-i586.jar"/>
+	<classpathentry kind="lib" path="C:/Processing/libraries/minim/library/jl1.0.1.jar"/>
+	<classpathentry kind="lib" path="C:/Processing/libraries/minim/library/jsminim.jar"/>
+	<classpathentry kind="lib" path="C:/Processing/libraries/minim/library/minim.jar"/>
+	<classpathentry kind="lib" path="C:/Processing/libraries/minim/library/mp3spi1.9.5.jar"/>
+	<classpathentry kind="lib" path="C:/Processing/libraries/minim/library/tritonus_aos.jar"/>
+	<classpathentry kind="lib" path="C:/Processing/libraries/minim/library/tritonus_share.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
