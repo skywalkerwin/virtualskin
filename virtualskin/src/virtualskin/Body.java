@@ -14,6 +14,7 @@ public class Body {
 	Side right;
 	static float PI = PConstants.PI;
 	int xyz = 0;
+//	int xyz = 1;
 	int curLine = 0;
 	int maxLines = 100;
 	float[][][] handpoint = new float[2][maxLines][4];
@@ -129,7 +130,11 @@ public class Body {
 	float xzd = 0;
 	float yrot = 0;
 	float zrot = 0;
-
+	
+	float yrot2 = 0;
+	float zrot2 = 0;
+	int sidecheck=0;
+	
 	public void drawBody() {
 		proc.pushMatrix();
 //		proc.pushMatrix();
@@ -160,22 +165,23 @@ public class Body {
 		mxd = (handpoint[1][curLine][0] + handpoint[0][curLine][0]) / 2;
 		myd = (handpoint[1][curLine][1] + handpoint[0][curLine][1]) / 2;
 		mzd = (handpoint[1][curLine][2] + handpoint[0][curLine][2]) / 2;
-		hdis = proc.dist(handpoint[0][curLine][0], handpoint[0][curLine][1], handpoint[0][curLine][2],
+		hdis = PApplet.dist(handpoint[0][curLine][0], handpoint[0][curLine][1], handpoint[0][curLine][2],
 				handpoint[1][curLine][0], handpoint[1][curLine][1], handpoint[1][curLine][2]);
 		hdishist[curLine] = hdis;
 		xzd = PApplet.sqrt((xd * xd + zd * zd));
-		yrot = -PApplet.asin(zd / xzd);
+//		yrot = -PApplet.asin(zd / xzd);
+		yrot = -PApplet.atan2(zd , xd);
 		zrot = PApplet.asin(yd / hdis);
 		yrots[curLine] = yrot;
 		zrots[curLine] = zrot;
-		if (handpoint[1][curLine][0] < handpoint[1][curLine][0]) {
-			yrot = yrot + PI;
-		}
-//		yrot = PApplet.atan2(xd , zd);
-//		zrot = PApplet.atan2(yd , hdis);
+		updatefft();
 //		armlines();
-		voice();
-		showfft();
+		proc.text(left.switchbinary,50,50);
+		proc.text(right.switchbinary,50,100);
+		if(left.switchbinary>0 && right.switchbinary>0) {
+		soundwave(50);
+		}
+//		showfft();
 //		ffthist();
 		curLine++;
 		if (curLine == maxLines) {
@@ -186,32 +192,49 @@ public class Body {
 
 	float rotz = 0;
 	float radius = 200;
-	float bandnum = 400;
-	float maxf = 0;
+	float bandnum = 300;
+	float maxfsong = 0;
+	float maxfvoice = 0;
 	float[] fhist = new float[(int) (bandnum)];
 	int offset = 0;
-	int maxi = 0;
+	int maxisong = 0;
+	int maxivoice = 0;
 	float[][] sfreqhist = new float[maxLines][(int) bandnum];
 	float[][] vfreqhist = new float[maxLines][(int) bandnum];
 	float[] yrots = new float[maxLines];
 	float[] zrots = new float[maxLines];
 	float[] hdishist = new float[maxLines];
 
+	float beatsong=0f;
+	float beatvoice=0f;
+	public void updatefft() {
+		fftLin.forward(song.mix);
+		fftLinV.forward(in.mix);
+		for (int i = offset; i < bandnum; i++) {
+			if (fftLin.getBand(i) > maxfsong) {
+				maxfsong = fftLin.getBand(i);
+				maxisong = i;
+			}
+		}
+		beatsong=fftLin.getBand(maxisong);
+		
+		for (int i = offset; i < bandnum; i++) {
+			if (fftLinV.getBand(i) > maxfvoice) {
+				maxfvoice = fftLinV.getBand(i);
+				maxivoice = i;
+			}
+		}
+		beatsong=fftLin.getBand(maxivoice);
+	}
+
 	public void showfft() {
 		proc.pushMatrix();
 		proc.strokeWeight(2);
 		proc.stroke(0, 255, 0);
-		fftLin.forward(song.mix);
-		fftLinV.forward(in.mix);
-
 		proc.translate(handpoint[0][curLine][0], handpoint[0][curLine][1], handpoint[0][curLine][2]);
 		proc.rotateY(yrot);
 		proc.rotateZ(zrot);
 		for (int i = offset; i < bandnum; i++) {
-			if (fftLin.getBand(i) > maxf) {
-				maxf = fftLin.getBand(i);
-				maxi = i;
-			}
 			// song
 			proc.stroke(255, 0, 0);
 			proc.line(i * (hdis / bandnum), 0, 0, i * (hdis / bandnum), -fftLin.getBand(i), 0);
@@ -221,12 +244,25 @@ public class Body {
 		}
 		proc.popMatrix();
 	}
-	
+
+	public void fftring(int r) {
+		int rad = r;
+		for (int i = 0; i < bandnum; i++) {
+//			proc.pushMatrix();
+			proc.rotateY(i / (bandnum - offset) * 2 * PI);
+//			proc.translate(0,-rad, 0);
+			proc.stroke(255);
+			proc.strokeWeight(1+beatsong/100);
+			proc.line(-rad-beatsong/4, 0, 0 , -rad - fftLin.getBand(i)-beatsong/4, 0, 0);
+//			proc.popMatrix();
+
+		}
+
+	}
+
 	public void ffthist() {
 		proc.strokeWeight(1);
-		fftLin.forward(song.mix);
-//		fftLinV.forward(in.mix);
-		for(int i=0;i<bandnum; i++) {
+		for (int i = 0; i < bandnum; i++) {
 			sfreqhist[curLine][i] = fftLin.getBand(i);
 //			vfreqhist[curLine][i] = fftLinV.getBand(i);
 		}
@@ -235,7 +271,7 @@ public class Body {
 			proc.translate(handpoint[0][i][0], handpoint[0][i][1], handpoint[0][i][2]);
 			proc.rotateY(yrots[i]);
 			proc.rotateZ(zrots[i]);
-			for(int j=0;j<bandnum;j++) {
+			for (int j = 0; j < bandnum; j++) {
 				// song
 				proc.stroke(255, 0, 0);
 				proc.line(j * (hdishist[i] / bandnum), 0, 0, j * (hdishist[i] / bandnum), -sfreqhist[i][j], 0);
@@ -250,7 +286,7 @@ public class Body {
 			proc.translate(handpoint[0][i][0], handpoint[0][i][1], handpoint[0][i][2]);
 			proc.rotateY(yrots[i]);
 			proc.rotateZ(zrots[i]);
-			for(int j=0;j<bandnum;j++) {
+			for (int j = 0; j < bandnum; j++) {
 				// song
 				proc.stroke(255, 0, 0);
 				proc.line(j * (hdishist[i] / bandnum), 0, 0, j * (hdishist[i] / bandnum), -sfreqhist[i][j], 0);
@@ -260,22 +296,26 @@ public class Body {
 			}
 			proc.popMatrix();
 		}
-		
+
 	}
 
-	public void voice() {
+	public void soundwave(float a) {
+		float amp=a;
 		proc.pushMatrix();
-		proc.strokeWeight(5);
+		proc.strokeWeight(.5f);
 		proc.translate(handpoint[0][curLine][0], handpoint[0][curLine][1], handpoint[0][curLine][2]);
-		proc.stroke(255, 255, 0);
-		proc.text(yrot*180/PI, 100, 100);
-		proc.text(zrot*180/PI, 100, 150);
+		proc.stroke(0, 255, 0);
 		proc.rotateY(yrot);
 		proc.rotateZ(zrot);
-		for (int i = 0; i < in.bufferSize() - 1; i++) {
-			proc.line((i * (hdis / 1024)), in.left.get(i) * 100, ((i + 1) * (hdis / 1024)), in.left.get(i + 1) * 100);
+		float bufsize = song.bufferSize();
+		for (int i = 0; i < bufsize - 1; i++) {
+			proc.line((i * (hdis / bufsize)), song.mix.get(i) * 100, ((i + 1) * (hdis / bufsize)), song.mix.get(i + 1) * 100);
+			
+//			proc.line((i * (hdis / bufsize)), song.mix.get(i) * 100 + proc.cos(i*(PI*2/bufsize))*a-a, ((i + 1) * (hdis / bufsize)), song.mix.get(i + 1) * 100 + proc.cos((i+1)*(proc.PI*2/bufsize))*a-a);
+//			
+//			proc.line((i * (hdis / bufsize)), song.mix.get(i) * 100 - proc.cos(i*(PI*2/bufsize))*a+a, ((i + 1) * (hdis / bufsize)), song.mix.get(i + 1) * 100 - proc.cos((i+1)*(proc.PI*2/bufsize))*a+a);
 		}
-		proc.popMatrix();
+		proc.popMatrix();		
 	}
 
 	public void armlines() {
@@ -313,8 +353,8 @@ public class Body {
 		proc.popMatrix();
 	}
 
-//	int drawbool = 0;
-	int drawbool = 1;
+	int drawbool = 0;
+//	int drawbool = 1;
 
 	public void arm(Side side, int direction) {
 		int d = direction;
@@ -398,6 +438,7 @@ public class Body {
 			xyzlines();
 		}
 		proc.translate(0, len / 2, 0);
+		fftring(80);
 		int k = d;
 		if (k == -1) {
 			k = 0;

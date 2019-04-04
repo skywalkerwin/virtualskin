@@ -92,7 +92,7 @@ public class processing extends PApplet {
 //		long n1 = System.nanoTime();
 		thread("leftCollect");
 		thread("rightCollect");
-//		body.printSendTimes();
+		body.printSendTimes();
 //		body.printTRPY();
 //		int m2 = millis();
 //		long n2 = System.nanoTime();
