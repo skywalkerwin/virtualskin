@@ -4,7 +4,7 @@ import processing.core.PApplet;
 import processing.serial.*;
 import ddf.minim.*;
 import ddf.minim.analysis.*;
-
+import ddf.minim.ugens.*;
 
 public class processing extends PApplet {
 	String leftcom = "COM4";
@@ -18,7 +18,12 @@ public class processing extends PApplet {
 	Minim minim;
 	AudioPlayer song;
 	AudioOutput out;
+	AudioOutput out2;
+	AudioOutput out3;
 	String songfile = "C:/music/ghostvoices.mp3";
+//	String songfile = "C:/music/angelvoicesremix.mp3";
+//	String songfile = "C:/music/ghostvoices.mp3";
+
 //	String songfile = "C:\\music\\ghostvoices.mp3";
 //	String songfile = "/virtualskin/music/ghostvoices.mp3";
 //	AudioMetaData meta;
@@ -62,8 +67,12 @@ public class processing extends PApplet {
 		delay(1000);
 		sphereDetail(10);
 		minim = new Minim(this);
+//		out = minim.getLineOut();
+//		out2 = minim.getLineOut();
+//		out3 = minim.getLineOut();
+
 		song = minim.loadFile(songfile, 2048);
-		body = new Body(this, leftPort, rightPort, minim, out, song);
+		body = new Body(this, leftPort, rightPort, minim, song);
 	}
 
 	int order = 0;
@@ -84,6 +93,11 @@ public class processing extends PApplet {
 	public void rightCollect() {
 		body.right.serialEvent();
 	}
+
+	int framecounter = 0;
+	float targetx = 0f;
+	float targety = 0f;
+	float targetz = 0f;
 
 	public void draw() {
 		ortho();
@@ -113,7 +127,18 @@ public class processing extends PApplet {
 		textSize(30);
 		text(frameRate, 20, 20);
 		counter++;
+		pushMatrix();
+		translate(targetx, targety);
+		fill(255);
+		sphere(50);
+		popMatrix();
 		body.drawBody();
+		framecounter++;
+		if (framecounter > 100) {
+			targetx = random(400, width - 400);
+			targety = random(200, height - 200);
+			framecounter = 0;
+		}
 	}
 
 	public void mousePressed() {

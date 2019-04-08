@@ -7,6 +7,7 @@ import ddf.minim.*;
 import ddf.minim.Minim;
 import ddf.minim.AudioPlayer;
 import ddf.minim.analysis.*;
+import ddf.minim.ugens.*;
 
 public class Body {
 	PApplet proc;
@@ -21,13 +22,20 @@ public class Body {
 	float[][][] elbowpoint = new float[2][maxLines][4];
 	Minim minim;
 	AudioInput in;
-	AudioOutput out;
+//	AudioOutput out1;
+//	AudioOutput out2;
+//	AudioOutput out3;
+	AudioOutput[] out = new AudioOutput[30];
 	AudioPlayer song;
 	FFT fftLin;
 	FFT fftLinV;
 	FFT fftLog;
+//	Oscil wave1;
+//	Oscil wave2;
+//	Oscil wave3;
+	Oscil[] wave = new Oscil[30];
 
-	Body(PApplet p, Serial leftport, Serial rightport, Minim m, AudioOutput o, AudioPlayer s) {
+	Body(PApplet p, Serial leftport, Serial rightport, Minim m, AudioPlayer s) {
 		proc = p;
 		left = new Side(proc, this, leftport, 0);
 		right = new Side(proc, this, rightport, 0);
@@ -42,10 +50,16 @@ public class Body {
 
 		minim = m;
 		song = s;
-		out = o;
-		in = minim.getLineIn();
+		for(int i=0;i<30;i++) {
+			out[i] = minim.getLineOut();
+			wave[i] = new Oscil(440, 0.5f, Waves.SINE);
+			wave[i].patch(out[i]);
+		}
+
+		in = minim.getLineIn(Minim.STEREO, 2048);
 		in.enableMonitoring();
-		song.loop();
+		
+//		song.loop();
 		fftLin = new FFT(song.bufferSize(), 88200);
 		fftLinV = new FFT(in.bufferSize(), 88200);
 		fftLin.linAverages(30);
@@ -73,12 +87,12 @@ public class Body {
 	}
 
 	public void testimus(Side side) {
-		for (int i = 0; i < 3; i++) {
+		for (int i = 0; i < 8; i++) {
 			proc.pushMatrix();
-			proc.translate(0, (1 + i) * proc.height / 4, 0);
-			proc.text(side.yaw[i], 50, 50);
-			proc.text(side.pitch[i], 50, 100);
-			proc.text(-side.roll[i], 50, 150);
+			proc.translate(0, (1 + i) * proc.height / 9, 0);
+//			proc.text(side.yaw[i], 50, 50);
+//			proc.text(side.pitch[i], 50, 100);
+//			proc.text(-side.roll[i], 50, 150);
 			proc.rotateX(-PI / 2);
 			proc.strokeWeight(.5f);
 //			xyzlines();
@@ -108,7 +122,7 @@ public class Body {
 
 	public void plots() {
 //		proc.scale(.2f);
-		left.plot9Lines(0, 2);
+		left.plot9Lines(0, 1);
 //		left.plot9Points(0, 0);
 //		left.plot9Points(0, 1);
 //		left.plot9Points(0, 2);
@@ -130,22 +144,23 @@ public class Body {
 	float xzd = 0;
 	float yrot = 0;
 	float zrot = 0;
-	
+
 	float yrot2 = 0;
 	float zrot2 = 0;
-	int sidecheck=0;
-	
+	int sidecheck = 0;
+
 	public void drawBody() {
 		proc.pushMatrix();
-//		proc.pushMatrix();
-//		proc.translate(1 * proc.width / 6, 0, 0);
-//		testimus(left);
-//		proc.popMatrix();
+		plots();
+		proc.pushMatrix();
+		proc.translate(1 * proc.width / 7, 0, 0);
+		testimus(left);
+		proc.popMatrix();
 
-//		proc.pushMatrix();
-//		proc.translate(5 * proc.width / 6, 0, 0);
-//		testimus(right);
-//		proc.popMatrix();
+		proc.pushMatrix();
+		proc.translate(6 * proc.width / 7, 0, 0);
+		testimus(right);
+		proc.popMatrix();
 
 		// DRAW BODY STUFF
 		proc.pushMatrix();
@@ -170,18 +185,31 @@ public class Body {
 		hdishist[curLine] = hdis;
 		xzd = PApplet.sqrt((xd * xd + zd * zd));
 //		yrot = -PApplet.asin(zd / xzd);
-		yrot = -PApplet.atan2(zd , xd);
+		yrot = -PApplet.atan2(zd, xd);
 		zrot = PApplet.asin(yd / hdis);
 		yrots[curLine] = yrot;
 		zrots[curLine] = zrot;
 		updatefft();
-//		armlines();
-		proc.text(left.switchbinary,50,50);
-		proc.text(right.switchbinary,50,100);
-		if(left.switchbinary>0 && right.switchbinary>0) {
-		soundwave(50);
+		armlines();
+		proc.text(left.switchbinary, 50, 50);
+		proc.text(right.switchbinary, 50, 100);
+		proc.text(left.normpress, 50, 150);
+		proc.text(right.normpress, 50, 200);
+		if (left.switchbinary > 0) {
+			songwave(50);
 		}
-//		showfft();
+		if (right.switchbinary > 0) {
+			voicewave(50);
+		}
+		float bufsize = in.bufferSize();
+		proc.translate(0, 500, 0);
+		for (int i = 0; i < bufsize - 1; i++) {
+			proc.line((i * (hdis / bufsize)), in.mix.get(i) * 100, ((i + 1) * (hdis / bufsize)),
+					in.mix.get(i + 1) * 100);
+		}
+		updatewaves();
+//		soundwave(50);
+		showfft();
 //		ffthist();
 		curLine++;
 		if (curLine == maxLines) {
@@ -192,7 +220,7 @@ public class Body {
 
 	float rotz = 0;
 	float radius = 200;
-	float bandnum = 300;
+	float bandnum = 200;
 	float maxfsong = 0;
 	float maxfvoice = 0;
 	float[] fhist = new float[(int) (bandnum)];
@@ -205,8 +233,26 @@ public class Body {
 	float[] zrots = new float[maxLines];
 	float[] hdishist = new float[maxLines];
 
-	float beatsong=0f;
-	float beatvoice=0f;
+	float beatsong = 0f;
+	float beatvoice = 0f;
+
+	float amp = 0f;
+	float freq = 0f;
+
+	public void updatewaves() {
+//		amp = proc.map(left.normpress, 0, 1, 0, 1);
+		for(int i=0;i<5;i++) {
+			wave[i*3].setFrequency(proc.map(Math.abs(left.imu[i][3]), 0, 2000, 0, left.imu[i][0]*1000));
+			wave[i*3+1].setFrequency(proc.map(Math.abs(left.imu[i][4]), 0, 2000, 0, left.imu[i][1]*1000));
+			wave[i*3+2].setFrequency(proc.map(Math.abs(left.imu[i][5]), 0, 2000, 0, left.imu[i][2]*1000));
+		}
+		for(int i=0;i<5;i++) {
+			wave[i*3+15].setFrequency(proc.map(Math.abs(right.imu[i][3]), 0, 2000, 0, right.imu[i][0]*1000));
+			wave[i*3+16].setFrequency(proc.map(Math.abs(right.imu[i][4]), 0, 2000, 0, right.imu[i][1]*1000));
+			wave[i*3+17].setFrequency(proc.map(Math.abs(right.imu[i][5]), 0, 2000, 0, right.imu[i][2]*1000));
+		}
+	}
+
 	public void updatefft() {
 		fftLin.forward(song.mix);
 		fftLinV.forward(in.mix);
@@ -216,15 +262,15 @@ public class Body {
 				maxisong = i;
 			}
 		}
-		beatsong=fftLin.getBand(maxisong);
-		
+		beatsong = fftLin.getBand(maxisong);
+
 		for (int i = offset; i < bandnum; i++) {
 			if (fftLinV.getBand(i) > maxfvoice) {
 				maxfvoice = fftLinV.getBand(i);
 				maxivoice = i;
 			}
 		}
-		beatsong=fftLin.getBand(maxivoice);
+		beatsong = fftLin.getBand(maxivoice);
 	}
 
 	public void showfft() {
@@ -245,19 +291,30 @@ public class Body {
 		proc.popMatrix();
 	}
 
-	public void fftring(int r) {
+	public void fftsongring(int r) {
 		int rad = r;
 		for (int i = 0; i < bandnum; i++) {
 //			proc.pushMatrix();
 			proc.rotateY(i / (bandnum - offset) * 2 * PI);
 //			proc.translate(0,-rad, 0);
 			proc.stroke(255);
-			proc.strokeWeight(1+beatsong/100);
-			proc.line(-rad-beatsong/4, 0, 0 , -rad - fftLin.getBand(i)-beatsong/4, 0, 0);
+			proc.strokeWeight(1 + beatsong / 100);
+			proc.line(-rad - beatsong / 4, 0, 0, -rad - fftLin.getBand(i) - beatsong / 4, 0, 0);
 //			proc.popMatrix();
-
 		}
+	}
 
+	public void fftvoicering(int r) {
+		int rad = r;
+		for (int i = 0; i < bandnum; i++) {
+//			proc.pushMatrix();
+			proc.rotateY(i / (bandnum - offset) * 2 * PI);
+//			proc.translate(0,-rad, 0);
+			proc.stroke(255, 255, 0);
+			proc.strokeWeight(1 + beatvoice / 100);
+			proc.line(-rad - beatvoice / 4, 0, 0, -rad - fftLinV.getBand(i) - beatvoice / 4, 0, 0);
+//			proc.popMatrix();
+		}
 	}
 
 	public void ffthist() {
@@ -299,23 +356,44 @@ public class Body {
 
 	}
 
-	public void soundwave(float a) {
-		float amp=a;
+	public void songwave(float a) {
+		float amp = a;
 		proc.pushMatrix();
 		proc.strokeWeight(.5f);
 		proc.translate(handpoint[0][curLine][0], handpoint[0][curLine][1], handpoint[0][curLine][2]);
-		proc.stroke(0, 255, 0);
+		proc.stroke(0, 0, 255);
 		proc.rotateY(yrot);
 		proc.rotateZ(zrot);
 		float bufsize = song.bufferSize();
 		for (int i = 0; i < bufsize - 1; i++) {
-			proc.line((i * (hdis / bufsize)), song.mix.get(i) * 100, ((i + 1) * (hdis / bufsize)), song.mix.get(i + 1) * 100);
-			
+			proc.line((i * (hdis / bufsize)), song.mix.get(i) * 100, ((i + 1) * (hdis / bufsize)),
+					song.mix.get(i + 1) * 100);
+
 //			proc.line((i * (hdis / bufsize)), song.mix.get(i) * 100 + proc.cos(i*(PI*2/bufsize))*a-a, ((i + 1) * (hdis / bufsize)), song.mix.get(i + 1) * 100 + proc.cos((i+1)*(proc.PI*2/bufsize))*a-a);
 //			
 //			proc.line((i * (hdis / bufsize)), song.mix.get(i) * 100 - proc.cos(i*(PI*2/bufsize))*a+a, ((i + 1) * (hdis / bufsize)), song.mix.get(i + 1) * 100 - proc.cos((i+1)*(proc.PI*2/bufsize))*a+a);
 		}
-		proc.popMatrix();		
+		proc.popMatrix();
+	}
+
+	public void voicewave(float a) {
+		float amp = a;
+		proc.pushMatrix();
+		proc.strokeWeight(.5f);
+		proc.translate(handpoint[0][curLine][0], handpoint[0][curLine][1], handpoint[0][curLine][2]);
+		proc.stroke(255, 0, 0);
+		proc.rotateY(yrot);
+		proc.rotateZ(zrot);
+		float bufsize = in.bufferSize();
+		for (int i = 0; i < bufsize - 1; i++) {
+			proc.line((i * (hdis / bufsize)), in.mix.get(i) * 100, ((i + 1) * (hdis / bufsize)),
+					in.mix.get(i + 1) * 100);
+
+//			proc.line((i * (hdis / bufsize)), song.mix.get(i) * 100 + proc.cos(i*(PI*2/bufsize))*a-a, ((i + 1) * (hdis / bufsize)), song.mix.get(i + 1) * 100 + proc.cos((i+1)*(proc.PI*2/bufsize))*a-a);
+//			
+//			proc.line((i * (hdis / bufsize)), song.mix.get(i) * 100 - proc.cos(i*(PI*2/bufsize))*a+a, ((i + 1) * (hdis / bufsize)), song.mix.get(i + 1) * 100 - proc.cos((i+1)*(proc.PI*2/bufsize))*a+a);
+		}
+		proc.popMatrix();
 	}
 
 	public void armlines() {
@@ -327,6 +405,8 @@ public class Body {
 
 		proc.pushMatrix();
 		proc.stroke(0, 255, 0);
+//		proc.stroke(0, 0, 255);
+
 		for (int i = maxLines - 1; i > curLine; i--) {
 			proc.line(handpoint[0][i][0], handpoint[0][i][1], handpoint[0][i][2], handpoint[1][i][0],
 					handpoint[1][i][1], handpoint[1][i][2]);
@@ -358,8 +438,8 @@ public class Body {
 
 	public void arm(Side side, int direction) {
 		int d = direction;
-		int ulen = 250;
-		int llen = 200;
+		int ulen = 400;
+		int llen = 300;
 		proc.pushMatrix();
 		proc.strokeWeight(1);
 		proc.translate(d * 100, 0, -200);
@@ -426,7 +506,7 @@ public class Body {
 
 	public void hands(Side side, int direction) {
 		int d = direction;
-		int len = 100;
+		int len = 200;
 		proc.rotateY(side.roll[1] * PI / 180);
 		proc.rotateX(-side.pitch[1] * PI / 180);
 		proc.rotateZ(-side.yaw[1] * PI / 180);
@@ -438,7 +518,8 @@ public class Body {
 			xyzlines();
 		}
 		proc.translate(0, len / 2, 0);
-		fftring(80);
+		fftvoicering(150);
+		fftsongring(40);
 		int k = d;
 		if (k == -1) {
 			k = 0;

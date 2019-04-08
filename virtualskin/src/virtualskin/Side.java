@@ -39,7 +39,7 @@ public class Side {
 	int minpress = 1000;
 	int maxpress = 0;
 	int rangepress = 0;
-	double normpress = 0;
+	float normpress = 0f;
 	double[] presst = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 	double totalPress = 0;
 
@@ -211,7 +211,7 @@ public class Side {
 					minpress = thumbPressure;
 				}
 				rangepress = maxpress - minpress;
-				normpress = (1.0 * thumbPressure - minpress) / rangepress;
+				normpress = (1.0f * thumbPressure - minpress) / rangepress;
 				switches[0] = 1 - inBuffer[116];
 				switches[1] = 1 - inBuffer[117];
 				switches[2] = 1 - inBuffer[118];
